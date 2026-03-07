@@ -1,121 +1,183 @@
-import type { ApiJob } from '../types';
+import type {
+  GenerateMediaResponse,
+  SignedUploadRequest,
+  SignedUploadResponse,
+  ToolType,
+} from '../types';
+import { normalizeJobStatus } from '../types';
 
-export const DEFAULT_API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
-export type SignUploadPayload = {
-  filename: string;
-  contentType: string;
-  kind?: string;
-  jobId?: string;
-};
-
-export type SignUploadResult = {
-  ok?: boolean;
-  jobId: string;
-  objectPath?: string;
-  uploadUrl: string;
-  publicUrl?: string;
-};
+function requireApiBase(): string {
+  if (!API_BASE) {
+    throw new Error('VITE_API_BASE_URL belum diset.');
+  }
+  return API_BASE;
+}
 
 function authHeader(token?: string): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function resolveArgs<T extends FormData>(arg2?: string | T, arg3?: string | T): { formData: T; token?: string } {
-  if (arg2 instanceof FormData) {
-    return { formData: arg2 as T, token: typeof arg3 === 'string' ? arg3 : undefined };
-  }
-  if (arg3 instanceof FormData) {
-    return { formData: arg3 as T, token: typeof arg2 === 'string' ? arg2 : undefined };
-  }
-  throw new Error('FormData tidak ditemukan. Gunakan generateMedia(toolType, formData, token) atau generateMedia(toolType, token, formData).');
+function isFormData(value: unknown): value is FormData {
+  return typeof FormData !== 'undefined' && value instanceof FormData;
 }
 
-async function parseJsonSafe(res: Response) {
-  return res.json().catch(() => ({}));
+function normalizeGenerateArgs(
+  arg2?: FormData | string,
+  arg3?: FormData | string,
+): { formData: FormData; token?: string } {
+  if (isFormData(arg2)) {
+    return {
+      formData: arg2,
+      token: typeof arg3 === 'string' ? arg3 : undefined,
+    };
+  }
+
+  if (isFormData(arg3)) {
+    return {
+      formData: arg3,
+      token: typeof arg2 === 'string' ? arg2 : undefined,
+    };
+  }
+
+  throw new Error(
+    'generateMedia butuh FormData. Pola valid: (toolType, formData, token) atau (toolType, token, formData).',
+  );
+}
+
+async function parseJsonSafe<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function throwApiError(response: Response): Promise<never> {
+  const body = await parseJsonSafe<{ error?: unknown; message?: string }>(response);
+  const detail =
+    (typeof body?.error === 'string' && body.error) ||
+    body?.message ||
+    `Request gagal (${response.status} ${response.statusText})`;
+
+  throw new Error(detail);
 }
 
 export async function signUpload(
-  payload: SignUploadPayload,
+  payload: SignedUploadRequest,
   token?: string,
-  apiBaseUrl = DEFAULT_API_BASE_URL,
-): Promise<SignUploadResult> {
-  if (!apiBaseUrl) throw new Error('API base URL belum dikonfigurasi');
+): Promise<SignedUploadResponse> {
+  const apiBase = requireApiBase();
 
-  const res = await fetch(`${apiBaseUrl}/uploads/sign`, {
+  const response = await fetch(`${apiBase}/uploads/sign`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Accept: 'application/json',
       ...authHeader(token),
     },
     body: JSON.stringify(payload),
   });
 
-  const data = await parseJsonSafe(res);
-  if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Gagal membuat signed upload (${res.status})`);
+  if (!response.ok) {
+    await throwApiError(response);
   }
 
-  return data as SignUploadResult;
+  const data = await parseJsonSafe<SignedUploadResponse>(response);
+  if (!data?.uploadUrl) {
+    throw new Error('Response /uploads/sign tidak mengandung uploadUrl.');
+  }
+
+  return data;
 }
 
-export async function uploadToSignedUrl(uploadUrl: string, file: File | Blob, contentType?: string): Promise<void> {
-  const res = await fetch(uploadUrl, {
+export async function uploadFileToSignedUrl(
+  uploadUrl: string,
+  file: File | Blob,
+  contentType?: string,
+  extraHeaders?: Record<string, string>,
+): Promise<void> {
+  const response = await fetch(uploadUrl, {
     method: 'PUT',
-    headers: contentType ? { 'Content-Type': contentType } : undefined,
+    headers: {
+      'Content-Type': contentType ?? (file instanceof File ? file.type : 'application/octet-stream'),
+      ...(extraHeaders ?? {}),
+    },
     body: file,
   });
 
-  if (!res.ok) {
-    throw new Error(`Gagal upload file ke signed URL (${res.status})`);
+  if (!response.ok) {
+    throw new Error(`Upload ke signed URL gagal (${response.status} ${response.statusText}).`);
   }
 }
 
 export async function generateMedia(
-  toolType: 'nano' | 'veo',
-  arg2?: string | FormData,
-  arg3?: string | FormData,
-  apiBaseUrl = DEFAULT_API_BASE_URL,
-): Promise<ApiJob> {
-  if (!apiBaseUrl) throw new Error('API base URL belum dikonfigurasi');
+  toolType: ToolType,
+  arg2?: FormData | string,
+  arg3?: FormData | string,
+): Promise<GenerateMediaResponse> {
+  const apiBase = requireApiBase();
+  const { formData, token } = normalizeGenerateArgs(arg2, arg3);
 
-  const { formData, token } = resolveArgs<FormData>(arg2, arg3);
-  const endpoint = toolType === 'veo' ? '/generate/veo' : '/generate/nano';
-
-  const res = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const endpoint = toolType === 'nano' ? '/generate/nano' : '/generate/veo';
+  const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'POST',
     headers: {
-      Accept: 'application/json',
       ...authHeader(token),
     },
     body: formData,
   });
 
-  const data = await parseJsonSafe(res);
-  if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Gagal generate ${toolType} (${res.status})`);
+  if (!response.ok) {
+    await throwApiError(response);
   }
 
-  return data as ApiJob;
+  const data = await parseJsonSafe<GenerateMediaResponse>(response);
+  if (!data?.jobId) {
+    throw new Error('Response generateMedia tidak mengandung jobId.');
+  }
+
+  return {
+    ...data,
+    status: normalizeJobStatus(data.status),
+  };
 }
 
-export async function getJob(jobId: string, token?: string, apiBaseUrl = DEFAULT_API_BASE_URL): Promise<ApiJob> {
-  if (!jobId) throw new Error('jobId wajib diisi');
-  if (!apiBaseUrl) throw new Error('API base URL belum dikonfigurasi');
+export async function getJob(jobId: string, token?: string): Promise<GenerateMediaResponse> {
+  const apiBase = requireApiBase();
 
-  const res = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
+  const response = await fetch(`${apiBase}/jobs/${encodeURIComponent(jobId)}`, {
     method: 'GET',
     headers: {
-      Accept: 'application/json',
       ...authHeader(token),
     },
   });
 
-  const data = await parseJsonSafe(res);
-  if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Gagal mengambil detail job (${res.status})`);
+  if (!response.ok) {
+    await throwApiError(response);
   }
 
-  return data as ApiJob;
+  const data = await parseJsonSafe<GenerateMediaResponse>(response);
+  if (!data?.jobId) {
+    throw new Error('Response /jobs/:id tidak valid.');
+  }
+
+  return {
+    ...data,
+    status: normalizeJobStatus(data.status),
+  };
+}
+
+export async function healthCheck(): Promise<unknown> {
+  const apiBase = requireApiBase();
+  const response = await fetch(`${apiBase}/health`);
+
+  if (!response.ok) {
+    await throwApiError(response);
+  }
+
+  return parseJsonSafe(response);
 }
