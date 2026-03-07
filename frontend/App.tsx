@@ -512,27 +512,50 @@ const App: React.FC = () => {
                           </select>
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <FileUploader
-                            label="Start Frame (Optional)"
-                            onChange={(files) => setStartFrame(files[0] || null)}
-                          />
-                        </div>
-                        <div>
-                          <FileUploader
-                            label="End Frame (Optional)"
-                            onChange={(files) => setEndFrame(files[0] || null)}
-                          />
-                        </div>
-                      </div>
                     </>
                   )}
 
-                {/* Mock mode toggle */}
+                  {/* Image Specific Controls */}
+                  {mode === ToolType.IMAGE_NANO && (
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-200">Design Goal</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Object.values(DesignGoal).map((goal) => (
+                          <button
+                            key={goal}
+                            type="button"
+                            onClick={() => setDesignGoal(goal)}
+                            className={`px-4 py-3 rounded-lg text-sm border text-left transition-all ${
+                              designGoal === goal
+                                ? 'bg-white text-black border-white font-medium'
+                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                            }`}
+                          >
+                            {goal.replace('_', ' ').toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video Frames */}
+                {mode === ToolType.VIDEO_VEO && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
+                    <FileUploader
+                      label="Start Frame (Optional)"
+                      onChange={(files) => setStartFrame(files[0] || null)}
+                    />
+                    <FileUploader
+                      label="End Frame (Optional)"
+                      onChange={(files) => setEndFrame(files[0] || null)}
+                    />
+                  </div>
+                )}
+
+                {/* Mock mode toggle hidden sementara */}
                 {false && (
-                  <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-white/10">
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                     <div>
                       <div className="text-sm font-medium text-white">Mock mode</div>
@@ -550,7 +573,8 @@ const App: React.FC = () => {
                       <span className="text-sm text-gray-200">{useMock ? 'ON' : 'OFF'}</span>
                     </label>
                   </div>
-                  </div>
+                </div>
+
                 )}
 
                 <div className="pt-6">
