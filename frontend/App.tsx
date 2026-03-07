@@ -453,107 +453,86 @@ const App: React.FC = () => {
 
                   {/* Video Specific Controls */}
                   {mode === ToolType.VIDEO_VEO && (
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {Object.values(MotionStyle).map((style) => (
-                          <button
-                            key={style}
-                            type="button"
-                            onClick={() => setMotionStyle(style)}
-                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                              motionStyle === style
-                                ? 'bg-white text-black border-white font-medium'
-                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                            }`}
+                    <>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {Object.values(MotionStyle).map((style) => (
+                            <button
+                              key={style}
+                              type="button"
+                              onClick={() => setMotionStyle(style)}
+                              className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                                motionStyle === style
+                                  ? 'bg-white text-black border-white font-medium'
+                                  : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                              }`}
+                            >
+                              {style.charAt(0).toUpperCase() + style.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
+                          <select
+                            value={aspectRatio}
+                            onChange={(e) => setAspectRatio(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
                           >
-                            {style.charAt(0).toUpperCase() + style.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            <option value="16:9">16:9</option>
+                            <option value="9:16">9:16</option>
+                          </select>
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
-                        <select
-                          value={aspectRatio}
-                          onChange={(e) => setAspectRatio(e.target.value)}
-                          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                        >
-                          <option value="16:9">16:9</option>
-                          <option value="9:16">9:16</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-200">Resolution</label>
-                        <select
-                          value={resolution}
-                          onChange={(e) => setResolution(e.target.value)}
-                          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                        >
-                          <option value="720p">720p</option>
-                          <option value="1080p">1080p</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-200">Duration</label>
-                        <select
-                          value={durationSeconds}
-                          onChange={(e) => setDurationSeconds(e.target.value)}
-                          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                        >
-                          <option value="4">4 sec</option>
-                          <option value="6">6 sec</option>
-                          <option value="8">8 sec</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Image Specific Controls */}
-                  {mode === ToolType.IMAGE_NANO && (
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-200">Design Goal</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {Object.values(DesignGoal).map((goal) => (
-                          <button
-                            key={goal}
-                            type="button"
-                            onClick={() => setDesignGoal(goal)}
-                            className={`px-4 py-3 rounded-lg text-sm border text-left transition-all ${
-                              designGoal === goal
-                                ? 'bg-white text-black border-white font-medium'
-                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                            }`}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-200">Resolution</label>
+                          <select
+                            value={resolution}
+                            onChange={(e) => setResolution(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
                           >
-                            {goal.replace('_', ' ').toUpperCase()}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                            <option value="720p">720p</option>
+                            <option value="1080p">1080p</option>
+                          </select>
+                        </div>
 
-                {/* Video Frames */}
-                {mode === ToolType.VIDEO_VEO && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
-                    <FileUploader
-                      label="Start Frame (Optional)"
-                      onChange={(files) => setStartFrame(files[0] || null)}
-                    />
-                    <FileUploader
-                      label="End Frame (Optional)"
-                      onChange={(files) => setEndFrame(files[0] || null)}
-                    />
-                  </div>
-                )}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-200">Duration</label>
+                          <select
+                            value={durationSeconds}
+                            onChange={(e) => setDurationSeconds(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+                          >
+                            <option value="4">4 sec</option>
+                            <option value="6">6 sec</option>
+                            <option value="8">8 sec</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <FileUploader
+                            label="Start Frame (Optional)"
+                            onChange={(files) => setStartFrame(files[0] || null)}
+                          />
+                        </div>
+                        <div>
+                          <FileUploader
+                            label="End Frame (Optional)"
+                            onChange={(files) => setEndFrame(files[0] || null)}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                 {/* Mock mode toggle */}
                 {false && (
-                <div className="pt-4 border-t border-white/10">
+                  <div className="pt-4 border-t border-white/10">
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                     <div>
                       <div className="text-sm font-medium text-white">Mock mode</div>
@@ -571,7 +550,7 @@ const App: React.FC = () => {
                       <span className="text-sm text-gray-200">{useMock ? 'ON' : 'OFF'}</span>
                     </label>
                   </div>
-                </div>
+                  </div>
                 )}
 
                 <div className="pt-6">
