@@ -70,6 +70,27 @@ Setelah paste:
 
 ## Cara test backend (Cloud Shell)
 
+PATCH: View Media tidak error pada signed URL yang kadaluarsa
+
+Masalah utama:
+- URL hasil generate memakai signed URL GCS.
+- Signed URL ini punya masa berlaku terbatas (contoh: X-Goog-Expires=3600 = 1 jam).
+- Jika Job History menyimpan URL lama, tombol View Media akan gagal setelah URL kadaluarsa.
+
+Solusi frontend:
+1. Saat klik View Media, jangan langsung selalu pakai URL lama dari history.
+2. Cek apakah URL kosong / invalid / signed URL kadaluarsa.
+3. Jika ya, panggil ulang GET /jobs/:id untuk ambil result.url terbaru.
+4. Baru buka URL terbaru itu.
+
+Jika mock mode masih error walaupun refresh job:
+- backend mock kemungkinan tidak mengirim result.url yang valid.
+- perbaikan backend yang ideal: mock mode tetap mengembalikan result.url placeholder yang bisa diakses browser.
+
+File patch:
+- frontend/services/api.ts -> tambah getJob(...)
+- frontend/components/JobCard.tsx -> refresh latest job sebelum buka media
+
 Set URL:
 ```bash
 SERVICE_URL="$(gcloud run services describe ugc8s-api --region asia-southeast1 --format='value(status.url)')"
