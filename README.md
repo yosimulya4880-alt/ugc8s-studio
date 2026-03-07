@@ -1,53 +1,76 @@
-# Vertex AI Studio Frontend App with Node.js Backend
+# UGC8s Studio (Vertex Build UI) + Backend Cloud Run
 
-This repository contains a frontend and a Node.js backend, designed to run together.
-The backend acts as a proxy, handling Google Cloud API calls.
+Project ini terdiri dari:
+- **Frontend UI** (Vertex AI Studio Build / Vite + React)
+- **Backend API** (Cloud Run: ugc8s-api) untuk:
+  - Signed upload ke GCS
+  - Job store (GCS JSON)
+  - Generate Nano (Gemini image) + signed result URL
+  - Generate VEO (sementara mock / test finalize)
 
-This project is intended for demonstration and prototyping purposes only.
-It is not intended for use in a production environment.
+---
 
-## Prerequisites
+## Struktur Repo
 
-To run this application locally, you need:
+- `antarmuka pengguna/` (Frontend UI)
+  - `Aplikasi.tsx`  (App.tsx)
+  - `layanan/api.ts` (services/api.ts)
+  - `komponen/JobCard.tsx`
+  - `tipe.ts` (types.ts)
+  - `indeks.html`, `indeks.tsx`, `paket.json`, `vite.config.ts`, dll
 
-*   **[Google Cloud SDK / gcloud CLI](https://cloud.google.com/sdk/docs/install)**: Follow the instructions to install the SDK.
+- `backend/` (Cloud Run backend)
+  - `server.js` (atau `index.js`)
+  - `paket.json` (package.json)
+  - (opsional) `Dockerfile`
 
-*   **gcloud Initialization**:
-    *   Initialize the gcloud CLI:
-        ```bash
-        gcloud init
-        ```
-    *   Authenticate for Application Default Credentials (needed to call Google Cloud APIs):
-        ```bash
-        gcloud auth application-default login
-        ```
+> Catatan: Nama folder/file mengikuti hasil export Vertex Build. Bebas mau dirapikan nanti.
 
-*   **Node.js and npm**: Ensure you have Node.js and its package manager, `npm`, installed on your machine.
+---
 
-## Project Structure
+## Konfigurasi ENV (Cloud Run)
 
-The project is organized into two main directories:
+Backend Cloud Run membutuhkan ENV:
+- `OUTPUT_BUCKET` = bucket output (mis: `ugc-output-aibot-2026`)
+- `DUMMY_TOKEN` = token untuk Authorization (mis: `ugc8s-demo-123`)
+- `GEMINI_API_KEY` = API key Gemini (yang bisa generate image)
+- `NANO_API_MODEL` = `gemini-3.1-flash-image-preview`
+- `SIGNED_URL_TTL_MIN` = `60` (opsional)
+- `TEST_FINALIZE` = `true/false` (opsional, untuk VEO mock finalize)
 
-*   `frontend/`: Contains the Frontend application code.
-*   `backend/`: Contains the Node.js/Express server code to proxy Google Cloud API calls.
+⚠️ Jangan pernah commit nilai `GEMINI_API_KEY` / token ke GitHub.
 
-## Backend Environment Variables
+---
 
-The `backend/.env.local` file is automatically generated when you download this application.
-It contains essential Google Cloud environment variables pre-configured based on your project settings at the time of download.
+## Recovery cepat ketika Vertex Build rollback / restore checkpoint (1 menit)
 
-The variables set in `backend/.env.local` are:
-*   `API_BACKEND_PORT`: The port the backend API server listens on (e.g., `5000`).
-*   `API_PAYLOAD_MAX_SIZE`: The maximum size of the request payload accepted by the backend server (e.g., `5mb`).
-*   `GOOGLE_CLOUD_LOCATION`: The Google Cloud region associated with your project.
-*   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+Kadang Vertex AI Studio Build melakukan restore ke checkpoint lama ketika terjadi error/429.
+Jika UI menjadi blank atau muncul error import (mis. `signUpload export missing`), lakukan langkah berikut:
 
-**Note:** These variables are automatically populated during the download process.
-You can modify the values in `backend/.env.local` if you need to change them.
+### A) Pastikan 4 file inti selalu versi paling benar
 
-## Installation and Running the App
+Urutan paste yang disarankan (biar type/import konsisten):
+1. `tipe.ts` (types)
+2. `layanan/api.ts` (services/api)  ✅ harus export `signUpload`
+3. `komponen/JobCard.tsx`
+4. `Aplikasi.tsx` (App.tsx)
 
-To install dependencies and run your Google Cloud Vertex AI Studio App locally, execute the following command:
+Setelah paste:
+- **Save** di editor Build
+- refresh (kalau perlu)
 
+### B) Checklist cepat
+- `layanan/api.ts` harus punya:
+  - `export async function signUpload(...)`
+  - `export async function generateMedia(...)`
+  - `export async function getJobStatus(...)`
+- Request `/generate/nano` harus 200 dan Authorization header harus `Bearer <token>` (bukan `[object FormData]`).
+
+---
+
+## Cara test backend (Cloud Shell)
+
+Set URL:
 ```bash
-npm install && npm run dev
+SERVICE_URL="$(gcloud run services describe ugc8s-api --region asia-southeast1 --format='value(status.url)')"
+TOKEN="ugc8s-demo-123"
