@@ -1,106 +1,126 @@
-import React, { useMemo, useState } from 'react';
-import { getJob } from '../services/api';
-import type { ApiJob } from '../types';
+import type { JobRecord } from '../types';
+import { normalizeJobStatus } from '../types';
 
 type JobCardProps = {
-  job: ApiJob;
-  token?: string;
-  apiBaseUrl?: string;
-  onJobRefresh?: (job: ApiJob) => void;
+  job: JobRecord;
+  onRefresh?: (jobId: string) => void | Promise<void>;
 };
 
-function getDisplayUrl(job: ApiJob): string | undefined {
-  return job?.result?.url || (job as any)?.resultUrl || undefined;
+function getResultUrl(job: JobRecord): string | undefined {
+  return job.result?.url || job.resultUrl;
 }
 
-function isUsableHttpUrl(value?: string): boolean {
-  if (!value) return false;
+function getErrorText(error: JobRecord['error']): string | undefined {
+  if (!error) return undefined;
+  if (typeof error === 'string') return error;
+  return error.message || 'Terjadi error yang tidak diketahui.';
+}
+
+async function copyText(value: string): Promise<boolean> {
   try {
-    const u = new URL(value);
-    return u.protocol === 'http:' || u.protocol === 'https:';
+    await navigator.clipboard.writeText(value);
+    return true;
   } catch {
-    return false;
-  }
-}
-
-function isSignedUrlExpired(url?: string): boolean {
-  if (!url) return true;
-  try {
-    const parsed = new URL(url);
-    const date = parsed.searchParams.get('X-Goog-Date');
-    const expires = parsed.searchParams.get('X-Goog-Expires');
-    if (!date || !expires) return false;
-
-    const year = Number(date.slice(0, 4));
-    const month = Number(date.slice(4, 6)) - 1;
-    const day = Number(date.slice(6, 8));
-    const hour = Number(date.slice(9, 11));
-    const minute = Number(date.slice(11, 13));
-    const second = Number(date.slice(13, 15));
-    const signedAt = Date.UTC(year, month, day, hour, minute, second);
-    const expiresAt = signedAt + Number(expires) * 1000;
-    return Date.now() > expiresAt - 15000; // beri buffer 15 detik
-  } catch {
-    return false;
-  }
-}
-
-export default function JobCard({ job, token, apiBaseUrl, onJobRefresh }: JobCardProps) {
-  const [isOpening, setIsOpening] = useState(false);
-  const [message, setMessage] = useState<string>('');
-
-  const initialUrl = useMemo(() => getDisplayUrl(job), [job]);
-  const canView = isUsableHttpUrl(initialUrl) || job.status === 'succeeded';
-
-  async function handleViewMedia() {
-    setMessage('');
-    setIsOpening(true);
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
 
     try {
-      let latestJob = job;
-      let url = getDisplayUrl(latestJob);
-      const needsRefresh = !isUsableHttpUrl(url) || isSignedUrlExpired(url);
-
-      if (needsRefresh) {
-        latestJob = await getJob(job.jobId, token, apiBaseUrl);
-        onJobRefresh?.(latestJob);
-        url = getDisplayUrl(latestJob);
-      }
-
-      if (!isUsableHttpUrl(url)) {
-        throw new Error('Media belum punya URL preview yang valid. Jika ini mock mode, backend perlu mengirim result.url yang bisa diakses browser.');
-      }
-
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (err: any) {
-      setMessage(err?.message || 'Gagal membuka media.');
+      const ok = document.execCommand('copy');
+      return ok;
     } finally {
-      setIsOpening(false);
+      document.body.removeChild(textarea);
     }
   }
+}
+
+export default function JobCard({ job, onRefresh }: JobCardProps) {
+  const normalizedStatus = normalizeJobStatus(job.status);
+  const resultUrl = getResultUrl(job);
+  const errorText = getErrorText(job.error);
+
+  const handleCopy = async () => {
+    await copyText(job.jobId);
+  };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-sm text-white/60">ID: {job.jobId}</div>
-          <div className="truncate font-medium text-white">{job.prompt || 'Untitled job'}</div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm text-slate-500">Job ID</div>
+          <div className="break-all font-mono text-sm text-slate-900">{job.jobId}</div>
         </div>
-        <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">
-          {job.status}
-        </span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-50"
+        >
+          Copy
+        </button>
       </div>
 
-      <button
-        type="button"
-        onClick={handleViewMedia}
-        disabled={!canView || isOpening}
-        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white disabled:opacity-50"
-      >
-        {isOpening ? 'Opening...' : 'View Media'}
-      </button>
+      <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+        <div>
+          <span className="text-slate-500">Status:</span> {normalizedStatus}
+        </div>
+        <div>
+          <span className="text-slate-500">Provider:</span> {job.provider ?? '-'}
+        </div>
+        <div>
+          <span className="text-slate-500">Tool:</span> {job.toolType ?? '-'}
+        </div>
+        <div>
+          <span className="text-slate-500">Updated:</span> {job.updatedAt ?? '-'}
+        </div>
+      </div>
 
-      {message ? <div className="text-xs text-amber-300">{message}</div> : null}
+      {resultUrl ? (
+        <div className="mt-4">
+          <a
+            href={resultUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-blue-600 hover:underline"
+          >
+            Buka hasil
+          </a>
+          {job.result?.thumbnailUrl ? (
+            <img
+              src={job.result.thumbnailUrl}
+              alt="Preview hasil"
+              className="mt-3 max-h-56 rounded-xl border object-cover"
+            />
+          ) : job.result?.mimeType?.startsWith('image/') ? (
+            <img
+              src={resultUrl}
+              alt="Preview hasil"
+              className="mt-3 max-h-56 rounded-xl border object-cover"
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {errorText ? (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {errorText}
+        </div>
+      ) : null}
+
+      {onRefresh ? (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => onRefresh(job.jobId)}
+            className="rounded-xl bg-slate-900 px-3 py-2 text-sm text-white hover:opacity-90"
+          >
+            Refresh status
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
