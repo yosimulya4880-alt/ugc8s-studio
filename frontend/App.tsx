@@ -37,6 +37,8 @@ const loadState = <T,>(key: string, fallback: T): T => {
   }
 };
 
+type AppSection = 'studio' | 'kling';
+
 const App: React.FC = () => {
   // --- STATE INITIALIZATION (Load from Storage) ---
   
@@ -48,6 +50,7 @@ const App: React.FC = () => {
     return localStorage.getItem("ugc8s_api_token") || "";
   });
   const [showTokenInput, setShowTokenInput] = useState(false);
+  const [section, setSection] = useState<AppSection>(() => loadState("ugc8s_section", "studio"));
 
   // 2. Job History
   const [jobs, setJobs] = useState<Job[]>(() => {
@@ -148,6 +151,7 @@ const App: React.FC = () => {
 
   // Auto-save Effects
   useEffect(() => persist("ugc8s_mode", mode), [mode, persist]);
+  useEffect(() => persist("ugc8s_section", section), [section, persist]);
   useEffect(() => persist("ugc8s_use_mock", useMock), [useMock, persist]);
   useEffect(() => persist("ugc8s_prompt", prompt), [prompt, persist]);
   useEffect(() => persist("ugc8s_negativePrompt", negativePrompt), [negativePrompt, persist]);
@@ -353,7 +357,10 @@ const App: React.FC = () => {
 
           <nav className="flex-1 p-4 space-y-2">
             <button
-              onClick={() => setMode(ToolType.VIDEO_VEO)}
+              onClick={() => {
+                setSection("studio");
+                setMode(ToolType.VIDEO_VEO);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 mode === ToolType.VIDEO_VEO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
@@ -368,7 +375,10 @@ const App: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setMode(ToolType.IMAGE_NANO)}
+              onClick={() => {
+                setSection("studio");
+                setMode(ToolType.IMAGE_NANO);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 mode === ToolType.IMAGE_NANO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
@@ -379,6 +389,20 @@ const App: React.FC = () => {
               <div className="text-left">
                 <div className="font-medium">Image Mode</div>
                 <div className="text-xs opacity-70">Nano Model</div>
+              </div>
+            </button>
+            <button
+              onClick={() => setSection("kling")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                section === 'kling'
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Video className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Kling.AI</div>
+                <div className="text-xs opacity-70">Coming Soon</div>
               </div>
             </button>
           </nav>
@@ -422,6 +446,7 @@ const App: React.FC = () => {
         </aside>
 
         {/* Main Content */}
+        {section === 'studio' ? (
         <main className="flex-1 flex overflow-hidden">
           {/* Input Panel */}
           <div className="flex-1 overflow-y-auto p-8 border-r border-white/10 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -461,7 +486,7 @@ const App: React.FC = () => {
                     className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
                   />
                   <p className="text-xs text-gray-500">
-                    Isi negative prompt akan otomatis ditambahkan saat proses generate.
+                    Untuk keamanan pipeline saat ini, negative prompt digabung ke prompt utama saat submit.
                   </p>
                 </div>
 
@@ -692,7 +717,24 @@ const App: React.FC = () => {
             </div>
           </div>
         </main>
-      </div>
+
+        ) : (
+          <main className="flex-1 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div className="max-w-3xl mx-auto min-h-full flex items-center justify-center">
+              <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 md:p-10 text-center">
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <Video className="h-7 w-7" />
+                </div>
+                <div className="text-3xl font-bold mb-3">Kling.AI</div>
+                <div className="text-lg text-white/80 mb-4">Coming Soon</div>
+                <p className="mx-auto max-w-xl text-sm text-gray-400 leading-7">
+                  This section is under construction. Future roadmap: lipsync, motion reference,
+                  and advanced video controls powered by Kling.
+                </p>
+              </div>
+            </div>
+          </main>
+        )}      </div>
     </>
   );
 };
