@@ -472,24 +472,22 @@ const App: React.FC = () => {
                   description="Up to 3 additional images for context."
                 />
 
+                {/* Video Frames */}
+                {mode === ToolType.VIDEO_VEO && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FileUploader
+                      label="Start Frame (Optional)"
+                      onChange={(files) => setStartFrame(files[0] || null)}
+                    />
+                    <FileUploader
+                      label="End Frame (Optional)"
+                      onChange={(files) => setEndFrame(files[0] || null)}
+                    />
+                  </div>
+                )}
+
                 {/* Controls Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Lighting */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-200">Lighting Style</label>
-                    <select
-                      value={lighting}
-                      onChange={(e) => setLighting(e.target.value as Lighting)}
-                      className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none appearance-none cursor-pointer"
-                    >
-                      {Object.values(Lighting).map((l) => (
-                        <option key={l} value={l}>
-                          {l.replace('_', ' ').toUpperCase()}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   {/* Style Lock */}
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-200">Style Consistency</label>
@@ -519,7 +517,7 @@ const App: React.FC = () => {
 {mode === ToolType.VIDEO_VEO && (
   <>
     <div className="space-y-2 md:col-span-2">
-      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+      <label className="block text-sm font-medium text-gray-200">Video Style</label>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {Object.values(MotionStyle).map((style) => (
           <button
@@ -602,20 +600,6 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Video Frames */}
-                {mode === ToolType.VIDEO_VEO && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
-                    <FileUploader
-                      label="Start Frame (Optional)"
-                      onChange={(files) => setStartFrame(files[0] || null)}
-                    />
-                    <FileUploader
-                      label="End Frame (Optional)"
-                      onChange={(files) => setEndFrame(files[0] || null)}
-                    />
-                  </div>
-                )}
 
                 {/* Mock mode toggle */}
                 <div className="pt-4 border-t border-white/10">
