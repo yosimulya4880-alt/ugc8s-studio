@@ -1,5 +1,21 @@
+import React, { useMemo, useState } from 'react';
 import type { JobRecord } from '../types';
-import { normalizeJobStatus } from '../types';
+
+/**
+ * Local status normalizer.
+ * Sengaja di-inline supaya JobCard TIDAK bergantung pada export `normalizeJobStatus` dari types.ts
+ * (karena export itu tidak ada di repo-mu, dan bikin Vercel build gagal).
+ */
+function normalizeJobStatus(status?: string): string {
+  if (!status) return 'queued';
+  const s = String(status).toLowerCase();
+  if (['queued', 'pending', 'submitted'].includes(s)) return 'queued';
+  if (['processing', 'running', 'in_progress', 'working'].includes(s)) return 'running';
+  if (['succeeded', 'success', 'completed', 'done'].includes(s)) return 'succeeded';
+  if (['failed', 'error'].includes(s)) return 'failed';
+  if (['cancelled', 'canceled'].includes(s)) return 'cancelled';
+  return s;
+}
 
 type JobCardProps = {
   job: JobRecord;
@@ -7,13 +23,13 @@ type JobCardProps = {
 };
 
 function getResultUrl(job: JobRecord): string | undefined {
-  return job.result?.url || job.resultUrl;
+  return job.result?.url || (job as any).resultUrl;
 }
 
 function getErrorText(error: JobRecord['error']): string | undefined {
   if (!error) return undefined;
   if (typeof error === 'string') return error;
-  return error.message || 'Terjadi error yang tidak diketahui.';
+  return (error as any).message || 'Terjadi error yang tidak diketahui.';
 }
 
 async function copyText(value: string): Promise<boolean> {
@@ -28,99 +44,111 @@ async function copyText(value: string): Promise<boolean> {
     document.body.appendChild(textarea);
     textarea.focus();
     textarea.select();
-
     try {
       const ok = document.execCommand('copy');
-      return ok;
-    } finally {
       document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      document.body.removeChild(textarea);
+      return false;
     }
   }
 }
 
 export default function JobCard({ job, onRefresh }: JobCardProps) {
-  const normalizedStatus = normalizeJobStatus(job.status);
-  const resultUrl = getResultUrl(job);
-  const errorText = getErrorText(job.error);
+  const [copied, setCopied] = useState(false);
+
+  const status = useMemo(() => normalizeJobStatus(job.status), [job.status]);
+  const resultUrl = useMemo(() => getResultUrl(job), [job]);
+  const errorText = useMemo(() => getErrorText(job.error), [job.error]);
 
   const handleCopy = async () => {
-    await copyText(job.jobId);
+    const ok = await copyText(job.jobId);
+    setCopied(ok);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  const handleView = () => {
+    if (!resultUrl) return;
+    window.open(resultUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm text-slate-500">Job ID</div>
-          <div className="break-all font-mono text-sm text-slate-900">{job.jobId}</div>
-        </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="rounded-xl border px-3 py-1.5 text-sm hover:bg-slate-50"
-        >
-          Copy
-        </button>
-      </div>
+    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                status === 'succeeded'
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : status === 'failed'
+                  ? 'bg-rose-500/15 text-rose-300'
+                  : status === 'running'
+                  ? 'bg-amber-500/15 text-amber-300'
+                  : 'bg-slate-500/15 text-slate-300'
+              }`}
+            >
+              {status}
+            </span>
 
-      <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-        <div>
-          <span className="text-slate-500">Status:</span> {normalizedStatus}
-        </div>
-        <div>
-          <span className="text-slate-500">Provider:</span> {job.provider ?? '-'}
-        </div>
-        <div>
-          <span className="text-slate-500">Tool:</span> {job.toolType ?? '-'}
-        </div>
-        <div>
-          <span className="text-slate-500">Updated:</span> {job.updatedAt ?? '-'}
-        </div>
-      </div>
+            <span className="text-xs text-white/60">ID:</span>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="truncate text-xs font-mono text-white/80 hover:text-white"
+              title="Copy Job ID"
+            >
+              {job.jobId}
+            </button>
 
-      {resultUrl ? (
-        <div className="mt-4">
-          <a
-            href={resultUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-medium text-blue-600 hover:underline"
-          >
-            Buka hasil
-          </a>
-          {job.result?.thumbnailUrl ? (
-            <img
-              src={job.result.thumbnailUrl}
-              alt="Preview hasil"
-              className="mt-3 max-h-56 rounded-xl border object-cover"
-            />
-          ) : job.result?.mimeType?.startsWith('image/') ? (
-            <img
-              src={resultUrl}
-              alt="Preview hasil"
-              className="mt-3 max-h-56 rounded-xl border object-cover"
-            />
-          ) : null}
-        </div>
-      ) : null}
+            {copied && <span className="text-xs text-emerald-300">copied</span>}
+          </div>
 
-      {errorText ? (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {errorText}
-        </div>
-      ) : null}
+          {job.prompt && (
+            <div className="mt-2 line-clamp-2 text-sm font-semibold text-white">
+              {job.prompt}
+            </div>
+          )}
 
-      {onRefresh ? (
-        <div className="mt-4">
+          <div className="mt-1 text-xs text-white/60">
+            {job.provider ? String(job.provider).toUpperCase() : 'PROVIDER'}{' '}
+            {job.toolType ? `• ${String(job.toolType).toUpperCase()}` : ''}
+          </div>
+
+          {errorText && (
+            <div className="mt-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              {errorText}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={() => onRefresh(job.jobId)}
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+              title="Refresh job"
+            >
+              Refresh
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => onRefresh(job.jobId)}
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm text-white hover:opacity-90"
+            onClick={handleView}
+            disabled={!resultUrl}
+            className={`rounded-lg px-3 py-2 text-xs ${
+              resultUrl
+                ? 'bg-white/10 text-white hover:bg-white/15'
+                : 'bg-white/5 text-white/30 cursor-not-allowed'
+            }`}
           >
-            Refresh status
+            View Media
           </button>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
