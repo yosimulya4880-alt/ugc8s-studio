@@ -11,7 +11,7 @@ import {
   PromptGeneratorState,
   SHOT_TYPE_PRESETS,
   STYLE_PRESETS,
-} from "./prompt-utils";
+} from "../services/prompt-utils";
 
 type Props = {
   value: PromptGeneratorState;
