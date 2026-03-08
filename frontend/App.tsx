@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback,  useRef} from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ToolType,
   Lighting,
@@ -9,7 +9,7 @@ import {
 import { generateMedia, signUpload, getJob } from './services/api';
 import { Button } from './components/ui/Button';
 import { FileUploader } from './components/ui/FileUploader';
-import JobCard from './components/JobCard';
+import { JobCard } from './components/JobCard';
 import {
   Video,
   Image as ImageIcon,
@@ -40,7 +40,7 @@ const App: React.FC = () => {
   
   // 1. App Config
   const [mode, setMode] = useState<ToolType>(() => loadState("ugc8s_mode", ToolType.VIDEO_VEO));
-  const [useMock, setUseMock] = useState(() => loadState("ugc8s_use_mock", false));
+  const [useMock, setUseMock] = useState(() => loadState("ugc8s_use_mock", true));
   const [apiToken, setApiToken] = useState(() => {
     if (typeof window === 'undefined') return "";
     return localStorage.getItem("ugc8s_api_token") || "";
@@ -50,53 +50,40 @@ const App: React.FC = () => {
   // 2. Job History
   const [jobs, setJobs] = useState<Job[]>(() => {
     const loaded = loadState<Job[]>("ugc8s_jobs", []);
-
-  // --- polling refs ---
-  const jobsRef = useRef<Job[]>(jobs);
-  useEffect(() => { jobsRef.current = jobs; }, [jobs]);
-
-  const tokenRef = useRef<string>(apiToken);
-  useEffect(() => { tokenRef.current = apiToken; }, [apiToken]);
-
-  const mergeServerJob = (prev: Job, server: any): Job => {
-    const status = mapStatus(server.status);
-    return {
-      ...prev,
-      status,
-      updatedAt: server.updatedAt || new Date().toISOString(),
-      createdAt: prev.createdAt || server.createdAt || new Date().toISOString(),
-      provider: server.provider ?? prev.provider,
-      result: server.result ?? prev.result ?? null,
-      error: server.error ?? prev.error ?? null,
-      resultUrl: server.result?.url || server.resultUrl || prev.resultUrl,
-      metadataJsonUrl: server.metadataJsonUrl || prev.metadataJsonUrl,
-    };
-  };
-
-  const refreshJob = useCallback(async (jobId: string) => {
-    const token = tokenRef.current;
-    if (!token) return;
-    try {
-      const server = await getJob(jobId, token);
-      setJobs(prev => prev.map(j => (j.jobId === jobId ? mergeServerJob(j, server) : j)));
-    } catch (e) {
-      console.warn('refreshJob failed', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const token = tokenRef.current;
-      if (!token) return;
-      const pending = jobsRef.current.filter(j => j.status === 'running' || j.status === 'queued');
-      if (!pending.length) return;
-      pending.slice(0, 3).forEach(j => refreshJob(j.jobId));
-    }, 8000);
-    return () => window.clearInterval(interval);
-  }, [refreshJob]);
-
     return Array.isArray(loaded) ? loaded : [];
   });
+
+  // --- JOB POLLING (prevent "stuck running" in UI) ---
+  const jobsRef = useRef<Job[]>(jobs);
+  const tokenRef = useRef<string>(apiToken);
+
+  useEffect(() => { jobsRef.current = jobs; }, [jobs]);
+  useEffect(() => { tokenRef.current = apiToken; }, [apiToken]);
+
+  useEffect(() => {
+    const timer = window.setInterval(async () => {
+      const token = tokenRef.current;
+      if (!token) return;
+
+      const active = jobsRef.current.filter(j => j.status === 'running' || j.status === 'queued');
+      if (!active.length) return;
+
+      // refresh up to 3 jobs per tick to avoid spamming
+      for (const j of active.slice(0, 3)) {
+        try {
+          const fresh = await getJob(j.jobId, token);
+          setJobs(prev =>
+            prev.map(p => (p.jobId === j.jobId ? { ...p, ...fresh } : p))
+          );
+        } catch (e) {
+          // don't crash UI because of a single polling failure
+          console.warn('poll getJob failed', j.jobId, e);
+        }
+      }
+    }, 8000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   // 3. Form Inputs
   const [prompt, setPrompt] = useState(() => loadState("ugc8s_prompt", ""));
@@ -104,9 +91,6 @@ const App: React.FC = () => {
   const [lighting, setLighting] = useState<Lighting>(() => loadState("ugc8s_lighting", Lighting.STUDIO_SOFTBOX));
   const [motionStyle, setMotionStyle] = useState<MotionStyle>(() => loadState("ugc8s_motionStyle", MotionStyle.NORMAL));
   const [designGoal, setDesignGoal] = useState<DesignGoal>(() => loadState("ugc8s_designGoal", DesignGoal.POSTER));
-  const [aspectRatio, setAspectRatio] = useState(() => loadState("ugc8s_aspectRatio", "16:9"));
-  const [resolution, setResolution] = useState(() => loadState("ugc8s_resolution", "720p"));
-  const [durationSeconds, setDurationSeconds] = useState(() => loadState("ugc8s_durationSeconds", "8"));
 
   // 4. Files (Cannot be persisted due to browser security)
   const [heroImage, setHeroImage] = useState<File | null>(null);
@@ -222,8 +206,8 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!useMock && mode === ToolType.IMAGE_NANO && !heroImage) {
-      alert("Hero Image wajib diisi untuk Image Mode saat Mock mode OFF!");
+    if (!useMock && !heroImage) {
+      alert("Hero Image wajib diisi jika Mock mode OFF!");
       return;
     }
 
@@ -264,9 +248,6 @@ const App: React.FC = () => {
 
       if (mode === ToolType.VIDEO_VEO) {
         formData.append('motionStyle', motionStyle);
-        formData.append('aspectRatio', aspectRatio);
-        formData.append('resolution', resolution);
-        formData.append('durationSeconds', String(durationSeconds));
       } else {
         formData.append('designGoal', designGoal);
       }
@@ -290,7 +271,6 @@ const App: React.FC = () => {
       };
 
       setJobs(prev => [newJob, ...prev]);
-      setTimeout(() => refreshJob(newJob.jobId), 1500);
     } catch (error) {
       console.error(error);
       alert("Failed to start generation job. Check console for details.");
@@ -429,14 +409,10 @@ const App: React.FC = () => {
 
                 {/* Hero Image */}
                 <FileUploader
-                  label={mode === ToolType.VIDEO_VEO ? "Hero Image (Optional)" : "Hero Image"}
-                  required={!useMock && mode === ToolType.IMAGE_NANO}
+                  label="Hero Image"
+                  required={!useMock}
                   onChange={(files) => setHeroImage(files[0] || null)}
-                  description={
-                    mode === ToolType.VIDEO_VEO
-                      ? "Optional. Bisa dikosongkan untuk text-to-video."
-                      : "The main subject or style reference."
-                  }
+                  description="The main subject or style reference."
                 />
 
                 {/* Reference Images */}
@@ -491,69 +467,28 @@ const App: React.FC = () => {
                     </button>
                   </div>
 
-                 {/* Video Specific Controls */}
-{mode === ToolType.VIDEO_VEO && (
-  <>
-    <div className="space-y-2 md:col-span-2">
-      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {Object.values(MotionStyle).map((style) => (
-          <button
-            key={style}
-            type="button"
-            onClick={() => setMotionStyle(style)}
-            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-              motionStyle === style
-                ? "bg-white text-black border-white font-medium"
-                : "bg-surface border-white/10 text-gray-400 hover:border-white/30"
-            }`}
-          >
-            {style.charAt(0).toUpperCase() + style.slice(1)}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
-        <select
-          value={aspectRatio}
-          onChange={(e) => setAspectRatio(e.target.value)}
-          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-        >
-          <option value="16:9">16:9</option>
-          <option value="9:16">9:16</option>
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Resolution</label>
-        <select
-          value={resolution}
-          onChange={(e) => setResolution(e.target.value)}
-          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-        >
-          <option value="720p">720p</option>
-          <option value="1080p">1080p</option>
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-200">Duration</label>
-        <select
-          value={durationSeconds}
-          onChange={(e) => setDurationSeconds(e.target.value)}
-          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-        >
-          <option value="4">4 sec</option>
-          <option value="6">6 sec</option>
-          <option value="8">8 sec</option>
-        </select>
-      </div>
-    </div>
-  </>
-)}
+                  {/* Video Specific Controls */}
+                  {mode === ToolType.VIDEO_VEO && (
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {Object.values(MotionStyle).map((style) => (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => setMotionStyle(style)}
+                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                              motionStyle === style
+                                ? 'bg-white text-black border-white font-medium'
+                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                            }`}
+                          >
+                            {style.charAt(0).toUpperCase() + style.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Image Specific Controls */}
                   {mode === ToolType.IMAGE_NANO && (
