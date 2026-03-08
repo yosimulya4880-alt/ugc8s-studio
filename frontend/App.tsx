@@ -491,69 +491,69 @@ const App: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Video Specific Controls */}
-                  {mode === ToolType.VIDEO_VEO && (
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {Object.values(MotionStyle).map((style) => (
-                          <button
-                            key={style}
-                            type="button"
-                            onClick={() => setMotionStyle(style)}
-                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                              motionStyle === style
-                                ? 'bg-white text-black border-white font-medium'
-                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                            }`}
-                          >
-                            {style.charAt(0).toUpperCase() + style.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                 {/* Video Specific Controls */}
+{mode === ToolType.VIDEO_VEO && (
+  <>
+    <div className="space-y-2 md:col-span-2">
+      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {Object.values(MotionStyle).map((style) => (
+          <button
+            key={style}
+            type="button"
+            onClick={() => setMotionStyle(style)}
+            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+              motionStyle === style
+                ? "bg-white text-black border-white font-medium"
+                : "bg-surface border-white/10 text-gray-400 hover:border-white/30"
+            }`}
+          >
+            {style.charAt(0).toUpperCase() + style.slice(1)}
+          </button>
+        ))}
+      </div>
+    </div>
 
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
+        <select
+          value={aspectRatio}
+          onChange={(e) => setAspectRatio(e.target.value)}
+          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+        >
+          <option value="16:9">16:9</option>
+          <option value="9:16">9:16</option>
+        </select>
+      </div>
 
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-200">Resolution</label>
+        <select
+          value={resolution}
+          onChange={(e) => setResolution(e.target.value)}
+          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+        >
+          <option value="720p">720p</option>
+          <option value="1080p">1080p</option>
+        </select>
+      </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
-                      <select
-                        value={aspectRatio}
-                        onChange={(e) => setAspectRatio(e.target.value)}
-                        className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                      >
-                        <option value="16:9">16:9</option>
-                        <option value="9:16">9:16</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-200">Resolution</label>
-                      <select
-                        value={resolution}
-                        onChange={(e) => setResolution(e.target.value)}
-                        className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                      >
-                        <option value="720p">720p</option>
-                        <option value="1080p">1080p</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-200">Duration</label>
-                      <select
-                        value={durationSeconds}
-                        onChange={(e) => setDurationSeconds(e.target.value)}
-                        className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                      >
-                        <option value="4">4 sec</option>
-                        <option value="6">6 sec</option>
-                        <option value="8">8 sec</option>
-                      </select>
-                    </div>
-                  </div>
-                  )}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-200">Duration</label>
+        <select
+          value={durationSeconds}
+          onChange={(e) => setDurationSeconds(e.target.value)}
+          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+        >
+          <option value="4">4 sec</option>
+          <option value="6">6 sec</option>
+          <option value="8">8 sec</option>
+        </select>
+      </div>
+    </div>
+  </>
+)}
 
                   {/* Image Specific Controls */}
                   {mode === ToolType.IMAGE_NANO && (
