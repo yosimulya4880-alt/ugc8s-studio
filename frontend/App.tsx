@@ -362,7 +362,7 @@ const App: React.FC = () => {
                 setMode(ToolType.VIDEO_VEO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                mode === ToolType.VIDEO_VEO
+                section === 'studio' && mode === ToolType.VIDEO_VEO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -380,7 +380,7 @@ const App: React.FC = () => {
                 setMode(ToolType.IMAGE_NANO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                mode === ToolType.IMAGE_NANO
+                section === 'studio' && mode === ToolType.IMAGE_NANO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
