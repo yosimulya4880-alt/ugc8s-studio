@@ -498,24 +498,24 @@ const App: React.FC = () => {
                   {mode === ToolType.VIDEO_VEO && (
                     <>
                       <div className="space-y-2 md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-200">Motion Style</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {Object.values(MotionStyle).map((style) => (
-                            <button
-                              key={style}
-                              type="button"
-                              onClick={() => setMotionStyle(style)}
-                              className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                                motionStyle === style
-                                  ? 'bg-white text-black border-white font-medium'
-                                  : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                              }`}
-                            >
-                              {style.charAt(0).toUpperCase() + style.slice(1)}
-                            </button>
-                          ))}
-                        </div>
+                      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {Object.values(MotionStyle).map((style) => (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => setMotionStyle(style)}
+                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                              motionStyle === style
+                                ? 'bg-white text-black border-white font-medium'
+                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                            }`}
+                          >
+                            {style.charAt(0).toUpperCase() + style.slice(1)}
+                          </button>
+                        ))}
                       </div>
+                    </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
                         <div className="space-y-2">
@@ -557,20 +557,7 @@ const App: React.FC = () => {
                       </div>
                     </>
                   )}
-                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                              motionStyle === style
-                                ? 'bg-white text-black border-white font-medium'
-                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                            }`}
-                          >
-                            {style.charAt(0).toUpperCase() + style.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Image Specific Controls */}
+{/* Image Specific Controls */}
                   {mode === ToolType.IMAGE_NANO && (
                     <div className="space-y-2 md:col-span-2">
                       <label className="block text-sm font-medium text-gray-200">Design Goal</label>
@@ -609,8 +596,7 @@ const App: React.FC = () => {
                 )}
 
                 {/* Mock mode toggle */}
-                <div style={{ display: 'none' }}>
-                  <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-white/10">
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                     <div>
                       <div className="text-sm font-medium text-white">Mock mode</div>
@@ -629,7 +615,6 @@ const App: React.FC = () => {
                     </label>
                   </div>
                 </div>
-                  </div>
 
                 <div className="pt-6">
                   <Button
