@@ -103,10 +103,10 @@ const App: React.FC = () => {
   const [styleLock, setStyleLock] = useState(() => loadState("ugc8s_styleLock", true));
   const [lighting, setLighting] = useState<Lighting>(() => loadState("ugc8s_lighting", Lighting.STUDIO_SOFTBOX));
   const [motionStyle, setMotionStyle] = useState<MotionStyle>(() => loadState("ugc8s_motionStyle", MotionStyle.NORMAL));
-  const [designGoal, setDesignGoal] = useState<DesignGoal>(() => loadState("ugc8s_designGoal", DesignGoal.POSTER));
   const [aspectRatio, setAspectRatio] = useState(() => loadState("ugc8s_aspectRatio", "16:9"));
   const [resolution, setResolution] = useState(() => loadState("ugc8s_resolution", "720p"));
   const [durationSeconds, setDurationSeconds] = useState(() => loadState("ugc8s_durationSeconds", "8"));
+  const [designGoal, setDesignGoal] = useState<DesignGoal>(() => loadState("ugc8s_designGoal", DesignGoal.POSTER));
 
   // 4. Files (Cannot be persisted due to browser security)
   const [heroImage, setHeroImage] = useState<File | null>(null);
@@ -136,10 +136,10 @@ const App: React.FC = () => {
   useEffect(() => persist("ugc8s_styleLock", styleLock), [styleLock, persist]);
   useEffect(() => persist("ugc8s_lighting", lighting), [lighting, persist]);
   useEffect(() => persist("ugc8s_motionStyle", motionStyle), [motionStyle, persist]);
-  useEffect(() => persist("ugc8s_designGoal", designGoal), [designGoal, persist]);
   useEffect(() => persist("ugc8s_aspectRatio", aspectRatio), [aspectRatio, persist]);
   useEffect(() => persist("ugc8s_resolution", resolution), [resolution, persist]);
   useEffect(() => persist("ugc8s_durationSeconds", durationSeconds), [durationSeconds, persist]);
+  useEffect(() => persist("ugc8s_designGoal", designGoal), [designGoal, persist]);
   
   useEffect(() => {
     persist("ugc8s_jobs", jobs.slice(0, 50)); // Limit history size
@@ -496,28 +496,28 @@ const App: React.FC = () => {
 
                   {/* Video Specific Controls */}
                   {mode === ToolType.VIDEO_VEO && (
-                    <>
-                      <div className="space-y-2 md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-200">Motion Style</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {Object.values(MotionStyle).map((style) => (
-                          <button
-                            key={style}
-                            type="button"
-                            onClick={() => setMotionStyle(style)}
-                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                              motionStyle === style
-                                ? 'bg-white text-black border-white font-medium'
-                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                            }`}
-                          >
-                            {style.charAt(0).toUpperCase() + style.slice(1)}
-                          </button>
-                        ))}
+                    <div className="space-y-4 md:col-span-2">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-200">Motion Style</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {Object.values(MotionStyle).map((style) => (
+                            <button
+                              key={style}
+                              type="button"
+                              onClick={() => setMotionStyle(style)}
+                              className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                                motionStyle === style
+                                  ? 'bg-white text-black border-white font-medium'
+                                  : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                              }`}
+                            >
+                              {style.charAt(0).toUpperCase() + style.slice(1)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
                           <select
@@ -555,9 +555,22 @@ const App: React.FC = () => {
                           </select>
                         </div>
                       </div>
-                    </>
+                    </div>
                   )}
-{/* Image Specific Controls */}
+                            className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                              motionStyle === style
+                                ? 'bg-white text-black border-white font-medium'
+                                : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                            }`}
+                          >
+                            {style.charAt(0).toUpperCase() + style.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Image Specific Controls */}
                   {mode === ToolType.IMAGE_NANO && (
                     <div className="space-y-2 md:col-span-2">
                       <label className="block text-sm font-medium text-gray-200">Design Goal</label>
