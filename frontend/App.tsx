@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ToolType,
   Lighting,
@@ -6,7 +6,7 @@ import {
   DesignGoal,
   Job
 } from './types';
-import { generateMedia, signUpload } from './services/api';
+import { generateMedia, signUpload, getJob } from './services/api';
 import { Button } from './components/ui/Button';
 import { FileUploader } from './components/ui/FileUploader';
 import JobCard  from './components/JobCard';
@@ -50,6 +50,19 @@ const App: React.FC = () => {
   // 2. Job History
   const [jobs, setJobs] = useState<Job[]>(() => {
     const loaded = loadState<Job[]>("ugc8s_jobs", []);
+
+
+  // --- Polling refs (avoid stale closures) ---
+  const jobsRef = useRef<Job[]>(jobs);
+  useEffect(() => {
+    jobsRef.current = jobs;
+  }, [jobs]);
+
+  const tokenRef = useRef<string>(apiToken);
+  useEffect(() => {
+    tokenRef.current = apiToken;
+  }, [apiToken]);
+
     return Array.isArray(loaded) ? loaded : [];
   });
 
@@ -251,6 +264,8 @@ const App: React.FC = () => {
       };
 
       setJobs(prev => [newJob, ...prev]);
+      // kick a first refresh soon (then interval will keep polling)
+      setTimeout(() => refreshJob(newJob.jobId), 1500);
     } catch (error) {
       console.error(error);
       alert("Failed to start generation job. Check console for details.");
@@ -262,6 +277,53 @@ const App: React.FC = () => {
   const handleJobUpdate = (updatedJob: Job) => {
     setJobs(prev => prev.map(j => j.jobId === updatedJob.jobId ? updatedJob : j));
   };
+
+
+
+  const mergeServerJob = (prev: Job, server: any): Job => {
+    const status = mapStatus(server.status);
+    return {
+      ...prev,
+      status,
+      updatedAt: server.updatedAt || new Date().toISOString(),
+      createdAt: prev.createdAt || server.createdAt || new Date().toISOString(),
+      provider: server.provider ?? prev.provider,
+      result: server.result ?? prev.result ?? null,
+      error: server.error ?? prev.error ?? null,
+      resultUrl: server.result?.url || server.resultUrl || prev.resultUrl,
+      metadataJsonUrl: server.metadataJsonUrl || prev.metadataJsonUrl,
+    };
+  };
+
+  const refreshJob = useCallback(async (jobId: string) => {
+    const token = tokenRef.current;
+    if (!token) return;
+
+    try {
+      const server = await getJob(jobId, token);
+      setJobs((prev) => prev.map((j) => (j.jobId === jobId ? mergeServerJob(j, server) : j)));
+    } catch (e) {
+      console.warn("refreshJob failed", e);
+    }
+  }, []);
+
+  // Auto-poll running/queued jobs (Veo can take minutes)
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const token = tokenRef.current;
+      if (!token) return;
+
+      const pending = jobsRef.current.filter((j) => j.status === 'running' || j.status === 'queued');
+      if (!pending.length) return;
+
+      // Limit per tick to avoid flooding backend
+      pending.slice(0, 3).forEach((j) => {
+        refreshJob(j.jobId);
+      });
+    }, 8000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshJob]);
 
   return (
     <>
