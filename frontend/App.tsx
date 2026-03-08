@@ -461,7 +461,7 @@ const App: React.FC = () => {
                     className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
                   />
                   <p className="text-xs text-gray-500">
-                    Untuk keamanan pipeline saat ini, negative prompt digabung ke prompt utama saat submit.
+                    Isi negative prompt akan otomatis ditambahkan saat proses generate.
                   </p>
                 </div>
 
