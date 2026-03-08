@@ -10,6 +10,8 @@ import { generateMedia, signUpload, getJob } from './services/api';
 import { Button } from './components/ui/Button';
 import { FileUploader } from './components/ui/FileUploader';
 import JobCard from './components/JobCard';
+import PromptGeneratorPanel from './components/PromptGeneratorPanel';
+import { DEFAULT_PROMPT_GENERATOR_STATE } from './services/prompt-utils';
 import {
   Video,
   Image as ImageIcon,
@@ -120,6 +122,7 @@ const App: React.FC = () => {
   const [aspectRatio, setAspectRatio] = useState(() => loadState("ugc8s_aspectRatio", "16:9"));
   const [resolution, setResolution] = useState(() => loadState("ugc8s_resolution", "720p"));
   const [durationSeconds, setDurationSeconds] = useState(() => loadState("ugc8s_durationSeconds", "8"));
+  const [promptGen, setPromptGen] = useState(DEFAULT_PROMPT_GENERATOR_STATE);
 
   // 4. Files (Cannot be persisted due to browser security)
   const [heroImage, setHeroImage] = useState<File | null>(null);
@@ -439,6 +442,14 @@ const App: React.FC = () => {
                     required
                   />
                 </div>
+
+                <PromptGeneratorPanel
+                  value={promptGen}
+                  onChange={setPromptGen}
+                  currentPrompt={prompt}
+                  onInsert={setPrompt}
+                  onReset={() => setPromptGen(DEFAULT_PROMPT_GENERATOR_STATE)}
+                />
 
                 {/* Hero Image */}
                 <FileUploader
