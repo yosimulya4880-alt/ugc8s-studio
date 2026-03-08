@@ -57,6 +57,40 @@ function normalizeGenerateArgs(
   );
 }
 
+
+function formDataToVeoJson(formData: FormData): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const refs: string[] = [];
+
+  formData.forEach((value, key) => {
+    if (key === 'referenceImageGcsPaths' || key === 'referenceImageGcsPath') {
+      if (typeof value === 'string' && value) refs.push(value);
+      return;
+    }
+
+    if (key === 'mock') {
+      const v = typeof value === 'string' ? value : '';
+      out[key] = v === 'true' || v === '1';
+      return;
+    }
+
+    if (key === 'durationSeconds') {
+      const v = typeof value === 'string' ? Number(value) : NaN;
+      out[key] = Number.isFinite(v) ? v : value;
+      return;
+    }
+
+    // files are uploaded separately via signed URLs
+    if (value instanceof File || value instanceof Blob) return;
+
+    out[key] = value;
+  });
+
+  if (refs.length) out.referenceImageGcsPaths = refs;
+
+  return out;
+}
+
 async function parseJsonSafe<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text) return null;
@@ -133,13 +167,16 @@ export async function generateMedia(
   const apiBase = requireApiBase();
   const { formData, token } = normalizeGenerateArgs(arg2, arg3);
 
-  const endpoint = toolType === 'nano' ? '/generate/nano' : '/generate/veo';
+  const isNano = toolType === 'nano';
+  const endpoint = isNano ? '/generate/nano' : '/generate/veo';
+
   const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'POST',
     headers: {
+      ...(isNano ? {} : { 'Content-Type': 'application/json' }),
       ...authHeader(token),
     },
-    body: formData,
+    body: isNano ? formData : JSON.stringify(formDataToVeoJson(formData)),
   });
 
   if (!response.ok) {
@@ -157,7 +194,7 @@ export async function generateMedia(
   };
 }
 
-export async function getJob(jobId: string, token?: string): Promise<GenerateMediaResponse> {
+export async function getJobexport async function getJob(jobId: string, token?: string): Promise<GenerateMediaResponse> {
   const apiBase = requireApiBase();
 
   const response = await fetch(`${apiBase}/jobs/${encodeURIComponent(jobId)}`, {
