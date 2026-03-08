@@ -115,6 +115,7 @@ const App: React.FC = () => {
 
   // 3. Form Inputs
   const [prompt, setPrompt] = useState(() => loadState("ugc8s_prompt", ""));
+  const [negativePrompt, setNegativePrompt] = useState(() => loadState("ugc8s_negativePrompt", ""));
   const [styleLock, setStyleLock] = useState(() => loadState("ugc8s_styleLock", true));
   const [lighting, setLighting] = useState<Lighting>(() => loadState("ugc8s_lighting", Lighting.STUDIO_SOFTBOX));
   const [motionStyle, setMotionStyle] = useState<MotionStyle>(() => loadState("ugc8s_motionStyle", MotionStyle.NORMAL));
@@ -149,6 +150,7 @@ const App: React.FC = () => {
   useEffect(() => persist("ugc8s_mode", mode), [mode, persist]);
   useEffect(() => persist("ugc8s_use_mock", useMock), [useMock, persist]);
   useEffect(() => persist("ugc8s_prompt", prompt), [prompt, persist]);
+  useEffect(() => persist("ugc8s_negativePrompt", negativePrompt), [negativePrompt, persist]);
   useEffect(() => persist("ugc8s_styleLock", styleLock), [styleLock, persist]);
   useEffect(() => persist("ugc8s_lighting", lighting), [lighting, persist]);
   useEffect(() => persist("ugc8s_motionStyle", motionStyle), [motionStyle, persist]);
@@ -233,6 +235,11 @@ const App: React.FC = () => {
     }
 
     const trimmedPrompt = prompt.trim();
+    const trimmedNegativePrompt = negativePrompt.trim();
+    const finalPrompt = trimmedNegativePrompt
+      ? `${trimmedPrompt}\n\nAvoid / Negative:\n${trimmedNegativePrompt}`
+      : trimmedPrompt;
+
     if (!trimmedPrompt) {
       alert("Prompt wajib diisi.");
       return;
@@ -268,7 +275,7 @@ const App: React.FC = () => {
 
       const formData = new FormData();
       formData.append('jobId', clientJobId);
-      formData.append('prompt', trimmedPrompt);
+      formData.append('prompt', finalPrompt);
       formData.append('lighting', lighting);
       formData.append('toolType', mode);
       formData.append('styleLock', String(styleLock));
@@ -300,7 +307,7 @@ const App: React.FC = () => {
         result: response.result ?? null,
         error: response.error ?? null,
         toolType: mode,
-        prompt: trimmedPrompt,
+        prompt: finalPrompt,
         resultUrl: response.result?.url || response.resultUrl,
         metadataJsonUrl: response.metadataJsonUrl
       };
@@ -441,6 +448,21 @@ const App: React.FC = () => {
                     className="w-full h-32 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-200">
+                    Negative Prompt
+                  </label>
+                  <textarea
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder={mode === ToolType.VIDEO_VEO ? "What to avoid in the generated video..." : "What to avoid in the generated image..."}
+                    className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Untuk keamanan pipeline saat ini, negative prompt digabung ke prompt utama saat submit.
+                  </p>
                 </div>
 
                 <PromptGeneratorPanel
