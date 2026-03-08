@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, {useEffect, useState, useCallback,  useRef} from 'react';
 import {
   ToolType,
   Lighting,
@@ -6,10 +6,10 @@ import {
   DesignGoal,
   Job
 } from './types';
-import { generateMedia, signUpload } from './services/api';
+import { generateMedia, signUpload, getJob } from './services/api';
 import { Button } from './components/ui/Button';
 import { FileUploader } from './components/ui/FileUploader';
-import { JobCard } from './components/JobCard';
+import JobCard from './components/JobCard';
 import {
   Video,
   Image as ImageIcon,
@@ -50,6 +50,51 @@ const App: React.FC = () => {
   // 2. Job History
   const [jobs, setJobs] = useState<Job[]>(() => {
     const loaded = loadState<Job[]>("ugc8s_jobs", []);
+
+  // --- polling refs ---
+  const jobsRef = useRef<Job[]>(jobs);
+  useEffect(() => { jobsRef.current = jobs; }, [jobs]);
+
+  const tokenRef = useRef<string>(apiToken);
+  useEffect(() => { tokenRef.current = apiToken; }, [apiToken]);
+
+  const mergeServerJob = (prev: Job, server: any): Job => {
+    const status = mapStatus(server.status);
+    return {
+      ...prev,
+      status,
+      updatedAt: server.updatedAt || new Date().toISOString(),
+      createdAt: prev.createdAt || server.createdAt || new Date().toISOString(),
+      provider: server.provider ?? prev.provider,
+      result: server.result ?? prev.result ?? null,
+      error: server.error ?? prev.error ?? null,
+      resultUrl: server.result?.url || server.resultUrl || prev.resultUrl,
+      metadataJsonUrl: server.metadataJsonUrl || prev.metadataJsonUrl,
+    };
+  };
+
+  const refreshJob = useCallback(async (jobId: string) => {
+    const token = tokenRef.current;
+    if (!token) return;
+    try {
+      const server = await getJob(jobId, token);
+      setJobs(prev => prev.map(j => (j.jobId === jobId ? mergeServerJob(j, server) : j)));
+    } catch (e) {
+      console.warn('refreshJob failed', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const token = tokenRef.current;
+      if (!token) return;
+      const pending = jobsRef.current.filter(j => j.status === 'running' || j.status === 'queued');
+      if (!pending.length) return;
+      pending.slice(0, 3).forEach(j => refreshJob(j.jobId));
+    }, 8000);
+    return () => window.clearInterval(interval);
+  }, [refreshJob]);
+
     return Array.isArray(loaded) ? loaded : [];
   });
 
@@ -248,6 +293,7 @@ const App: React.FC = () => {
       };
 
       setJobs(prev => [newJob, ...prev]);
+      setTimeout(() => refreshJob(newJob.jobId), 1500);
     } catch (error) {
       console.error(error);
       alert("Failed to start generation job. Check console for details.");
@@ -562,9 +608,9 @@ const App: React.FC = () => {
                   </div>
                 )}
 
-                {/* Mock mode toggle hidden */}
-                {false && (
-                <div className="pt-4 border-t border-white/10">
+                {/* Mock mode toggle */}
+                <div style={{ display: 'none' }}>
+                  <div className="pt-4 border-t border-white/10">
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                     <div>
                       <div className="text-sm font-medium text-white">Mock mode</div>
@@ -583,8 +629,7 @@ const App: React.FC = () => {
                     </label>
                   </div>
                 </div>
-
-                )}
+                  </div>
 
                 <div className="pt-6">
                   <Button
