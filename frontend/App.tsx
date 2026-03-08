@@ -362,7 +362,7 @@ const App: React.FC = () => {
                 setMode(ToolType.VIDEO_VEO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                section === 'studio' && mode === ToolType.VIDEO_VEO
+                mode === ToolType.VIDEO_VEO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -380,7 +380,7 @@ const App: React.FC = () => {
                 setMode(ToolType.IMAGE_NANO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                section === 'studio' && mode === ToolType.IMAGE_NANO
+                mode === ToolType.IMAGE_NANO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -727,10 +727,13 @@ const App: React.FC = () => {
                 </div>
                 <div className="text-3xl font-bold mb-3">Kling.AI</div>
                 <div className="text-lg text-white/80 mb-4">Coming Soon</div>
-                <p className="mx-auto max-w-xl text-sm text-gray-400 leading-7">
-                  This section is under construction. Future roadmap: lipsync, motion reference,
-                  and advanced video controls powered by Kling.Follow Us on (Sosmed)
-                </p>
+                <div className="mx-auto max-w-xl text-sm text-gray-400 leading-7 space-y-3">
+                  <p>
+                    We’re building the next layer of video control with Kling, including lipsync,
+                    motion reference, and more advanced creative tools.
+                  </p>
+                  <p>Stay tuned for updates.</p>
+                </div>
               </div>
             </div>
           </main>
