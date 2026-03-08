@@ -4,9 +4,19 @@ import type {
   SignedUploadResponse,
   ToolType,
 } from '../types';
-import { normalizeJobStatus } from '../types';
-
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
+function normalizeJobStatus(status?: string): string {
+  if (!status) return 'queued';
+  const s = String(status).toLowerCase();
+  if (['queued', 'pending', 'submitted'].includes(s)) return 'queued';
+  if (['processing', 'running', 'in_progress', 'working'].includes(s)) return 'running';
+  if (['succeeded', 'success', 'completed', 'done'].includes(s)) return 'succeeded';
+  if (['failed', 'error'].includes(s)) return 'failed';
+  if (['cancelled', 'canceled'].includes(s)) return 'cancelled';
+  return s;
+}
+
 
 function requireApiBase(): string {
   if (!API_BASE) {
