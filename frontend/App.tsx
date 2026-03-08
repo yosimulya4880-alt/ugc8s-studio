@@ -729,7 +729,7 @@ const App: React.FC = () => {
                 <div className="text-lg text-white/80 mb-4">Coming Soon</div>
                 <p className="mx-auto max-w-xl text-sm text-gray-400 leading-7">
                   This section is under construction. Future roadmap: lipsync, motion reference,
-                  and advanced video controls powered by Kling.
+                  and advanced video controls powered by Kling.Follow Us on (Sosmed)
                 </p>
               </div>
             </div>
