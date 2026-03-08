@@ -9,7 +9,7 @@ import {
 import { generateMedia, signUpload, getJob } from './services/api';
 import { Button } from './components/ui/Button';
 import { FileUploader } from './components/ui/FileUploader';
-import { JobCard } from './components/JobCard';
+import JobCard from './components/JobCard';
 import {
   Video,
   Image as ImageIcon,
