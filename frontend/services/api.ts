@@ -17,7 +17,6 @@ function normalizeJobStatus(status?: string): string {
   return s;
 }
 
-
 function requireApiBase(): string {
   if (!API_BASE) {
     throw new Error('VITE_API_BASE_URL belum diset.');
@@ -56,6 +55,10 @@ function normalizeGenerateArgs(
   );
 }
 
+function isNanoTool(toolType: ToolType | string): boolean {
+  const value = String(toolType).toLowerCase();
+  return value === 'nano' || value === 'image_nano';
+}
 
 function formDataToVeoJson(formData: FormData): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -79,7 +82,6 @@ function formDataToVeoJson(formData: FormData): Record<string, unknown> {
       return;
     }
 
-    // files are uploaded separately via signed URLs
     if (value instanceof File || value instanceof Blob) return;
 
     out[key] = value;
@@ -166,7 +168,7 @@ export async function generateMedia(
   const apiBase = requireApiBase();
   const { formData, token } = normalizeGenerateArgs(arg2, arg3);
 
-  const isNano = toolType === 'nano';
+  const isNano = isNanoTool(toolType);
   const endpoint = isNano ? '/generate/nano' : '/generate/veo';
 
   const response = await fetch(`${apiBase}${endpoint}`, {
@@ -216,15 +218,4 @@ export async function getJob(jobId: string, token?: string): Promise<GenerateMed
     ...data,
     status: normalizeJobStatus(data.status),
   };
-}
-
-export async function healthCheck(): Promise<unknown> {
-  const apiBase = requireApiBase();
-  const response = await fetch(`${apiBase}/health`);
-
-  if (!response.ok) {
-    await throwApiError(response);
-  }
-
-  return parseJsonSafe(response);
 }
