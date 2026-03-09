@@ -171,13 +171,15 @@ export async function generateMedia(
   const isNano = isNanoTool(toolType);
   const endpoint = isNano ? '/generate/nano' : '/generate/veo';
 
+  const payload = formDataToVeoJson(formData);
+
   const response = await fetch(`${apiBase}${endpoint}`, {
     method: 'POST',
     headers: {
-      ...(isNano ? {} : { 'Content-Type': 'application/json' }),
+      'Content-Type': 'application/json',
       ...authHeader(token),
     },
-    body: isNano ? formData : JSON.stringify(formDataToVeoJson(formData)),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
