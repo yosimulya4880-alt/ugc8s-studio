@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
 import {
   buildGeneratedPrompt,
   CAMERA_ANGLE_PRESETS,
@@ -8,12 +8,14 @@ import {
   LIGHTING_PRESETS,
   mergePrompt,
   MOOD_PRESETS,
+  PromptGeneratorMode,
   PromptGeneratorState,
   SHOT_TYPE_PRESETS,
   STYLE_PRESETS,
-} from "../services/prompt-utils";
+} from '../services/prompt-utils';
 
 type Props = {
+  mode: PromptGeneratorMode;
   value: PromptGeneratorState;
   onChange: (next: PromptGeneratorState) => void;
   currentPrompt: string;
@@ -21,23 +23,22 @@ type Props = {
   onReset?: () => void;
 };
 
-function toggleMovement(
-  current: string[],
-  item: string,
-): string[] {
+function toggleMovement(current: string[], item: string): string[] {
   return current.includes(item)
     ? current.filter((value) => value !== item)
     : [...current, item];
 }
 
 export default function PromptGeneratorPanel({
+  mode,
   value,
   onChange,
   currentPrompt,
   onInsert,
   onReset,
 }: Props) {
-  const generated = useMemo(() => buildGeneratedPrompt(value), [value]);
+  const generated = useMemo(() => buildGeneratedPrompt(value, mode), [value, mode]);
+  const isVideo = mode === 'video';
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-4 md:p-6 space-y-5">
@@ -45,7 +46,9 @@ export default function PromptGeneratorPanel({
         <div>
           <h3 className="text-lg md:text-xl font-semibold">Prompt Generator</h3>
           <p className="text-sm text-white/60">
-            Builder cepat untuk image dan video tanpa mengubah pipeline generate.
+            {isVideo
+              ? 'Builder cepat untuk video prompt tanpa mengubah pipeline generate.'
+              : 'Builder cepat untuk image prompt tanpa mengubah pipeline generate.'}
           </p>
         </div>
 
@@ -72,7 +75,7 @@ export default function PromptGeneratorPanel({
           <label className="text-sm text-white/75">Language</label>
           <select
             value={value.lang}
-            onChange={(e) => onChange({ ...value, lang: e.target.value as "id" | "en" })}
+            onChange={(e) => onChange({ ...value, lang: e.target.value as 'id' | 'en' })}
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
           >
             <option value="id">Bahasa Indonesia</option>
@@ -80,34 +83,36 @@ export default function PromptGeneratorPanel({
           </select>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm text-white/75">Style</label>
-          <select
-            value={value.style}
-            onChange={(e) => onChange({ ...value, style: e.target.value })}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
-          >
-            <option value="">Select style</option>
-            {STYLE_PRESETS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isVideo && (
+          <div className="space-y-2">
+            <label className="text-sm text-white/75">Style</label>
+            <select
+              value={value.style}
+              onChange={(e) => onChange({ ...value, style: e.target.value })}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+            >
+              <option value="">Select style</option>
+              {STYLE_PRESETS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <TextField
           label="Subject"
           value={value.subject}
           onChange={(next) => onChange({ ...value, subject: next })}
-          placeholder="A woman holding a coffee cup"
+          placeholder={isVideo ? 'A woman holding a coffee cup' : 'A premium product placed on a clean studio set'}
         />
 
         <TextField
           label="Setting / Location"
           value={value.setting}
           onChange={(next) => onChange({ ...value, setting: next })}
-          placeholder="Traditional kitchen, warm morning light"
+          placeholder={isVideo ? 'Traditional kitchen, warm morning light' : 'Minimal studio background, soft ambient light'}
         />
 
         <div className="space-y-2">
@@ -191,44 +196,48 @@ export default function PromptGeneratorPanel({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="text-sm text-white/75">Camera Movement</div>
-        <div className="flex flex-wrap gap-2">
-          {CAMERA_MOVEMENT_PRESETS.map((item) => {
-            const active = value.cameraMovement.includes(item);
-            return (
-              <button
-                key={item}
-                type="button"
-                onClick={() =>
-                  onChange({
-                    ...value,
-                    cameraMovement: toggleMovement(value.cameraMovement, item),
-                  })
-                }
-                className={[
-                  "rounded-full border px-3 py-1.5 text-sm transition",
-                  active
-                    ? "border-white bg-white text-black"
-                    : "border-white/15 bg-black/20 hover:bg-white/10",
-                ].join(" ")}
-              >
-                {item}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {isVideo && (
+        <>
+          <div className="space-y-3">
+            <div className="text-sm text-white/75">Camera Movement</div>
+            <div className="flex flex-wrap gap-2">
+              {CAMERA_MOVEMENT_PRESETS.map((item) => {
+                const active = value.cameraMovement.includes(item);
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() =>
+                      onChange({
+                        ...value,
+                        cameraMovement: toggleMovement(value.cameraMovement, item),
+                      })
+                    }
+                    className={[
+                      'rounded-full border px-3 py-1.5 text-sm transition',
+                      active
+                        ? 'border-white bg-white text-black'
+                        : 'border-white/15 bg-black/20 hover:bg-white/10',
+                    ].join(' ')}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <TextAreaField
+            label="Audio / Dialogue Direction"
+            value={value.extraDetails}
+            onChange={(next) => onChange({ ...value, extraDetails: next })}
+            placeholder={'0.0-2.0s Narrator: "Hai teman"\n2.1-5.0s Speaker 2: "Halo juga"\nBackground audio: soft café ambience'}
+            rows={4}
+          />
+        </>
+      )}
 
       <div className="grid grid-cols-1 gap-4">
-        <TextAreaField
-          label="Additional Details"
-          value={value.extraDetails}
-          onChange={(next) => onChange({ ...value, extraDetails: next })}
-          placeholder="Product-focused framing, subtle steam from coffee, clean composition"
-          rows={4}
-        />
-
         <div className="space-y-2">
           <label className="text-sm text-white/75">Generated Prompt</label>
           <textarea
@@ -282,13 +291,7 @@ type TextAreaFieldProps = {
   rows?: number;
 };
 
-function TextAreaField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  rows = 4,
-}: TextAreaFieldProps) {
+function TextAreaField({ label, value, onChange, placeholder, rows = 4 }: TextAreaFieldProps) {
   return (
     <div className="space-y-2">
       <label className="text-sm text-white/75">{label}</label>
