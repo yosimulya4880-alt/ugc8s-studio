@@ -362,7 +362,7 @@ const App: React.FC = () => {
                 setMode(ToolType.VIDEO_VEO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                mode === ToolType.VIDEO_VEO
+                section === 'studio' && mode === ToolType.VIDEO_VEO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -380,7 +380,7 @@ const App: React.FC = () => {
                 setMode(ToolType.IMAGE_NANO);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                mode === ToolType.IMAGE_NANO
+                section === 'studio' && mode === ToolType.IMAGE_NANO
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
@@ -486,7 +486,7 @@ const App: React.FC = () => {
                     className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
                   />
                   <p className="text-xs text-gray-500">
-                    Untuk keamanan pipeline saat ini, negative prompt digabung ke prompt utama saat submit.
+                    Isi negative prompt akan otomatis ditambahkan saat proses generate.
                   </p>
                 </div>
 
