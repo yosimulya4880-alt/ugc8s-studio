@@ -90,6 +90,13 @@ const loadState = <T,>(key: string, fallback: T): T => {
 
 type AppSection = 'studio' | 'kling';
 
+const VIDEO_MODEL_MODES = [
+  { value: 'fast', label: 'Fast', description: 'Faster generation, lower cost.' },
+  { value: 'quality', label: 'Quality', description: 'Higher quality, better prompt adherence.' },
+] as const;
+
+type VideoModelMode = typeof VIDEO_MODEL_MODES[number]['value'];
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<ToolType>(() => loadState('ugc8s_mode', ToolType.VIDEO_VEO));
   const [useMock, setUseMock] = useState(() => loadState('ugc8s_use_mock', false));
@@ -166,6 +173,7 @@ const App: React.FC = () => {
   const [aspectRatio, setAspectRatio] = useState(() => loadState('ugc8s_aspectRatio', '16:9'));
   const [resolution, setResolution] = useState(() => loadState('ugc8s_resolution', '720p'));
   const [durationSeconds, setDurationSeconds] = useState(() => loadState('ugc8s_durationSeconds', '8'));
+  const [videoModelMode, setVideoModelMode] = useState<VideoModelMode>(() => loadState('ugc8s_videoModelMode', 'fast'));
   const [promptGen, setPromptGen] = useState(DEFAULT_PROMPT_GENERATOR_STATE);
 
   const [imageGenerationType, setImageGenerationType] = useState<ImageGenerationType>(() => loadState('ugc8s_imageGenerationType', 'text'));
@@ -202,6 +210,7 @@ const App: React.FC = () => {
   useEffect(() => persist('ugc8s_aspectRatio', aspectRatio), [aspectRatio, persist]);
   useEffect(() => persist('ugc8s_resolution', resolution), [resolution, persist]);
   useEffect(() => persist('ugc8s_durationSeconds', durationSeconds), [durationSeconds, persist]);
+  useEffect(() => persist('ugc8s_videoModelMode', videoModelMode), [videoModelMode, persist]);
   useEffect(() => persist('ugc8s_imageGenerationType', imageGenerationType), [imageGenerationType, persist]);
   useEffect(() => persist('ugc8s_imageOutputType', imageOutputType), [imageOutputType, persist]);
   useEffect(() => persist('ugc8s_imageVisualStyle', imageVisualStyle), [imageVisualStyle, persist]);
@@ -223,6 +232,7 @@ const App: React.FC = () => {
     persist('ugc8s_mode', mode);
     persist('ugc8s_use_mock', useMock);
     persist('ugc8s_prompt', prompt);
+    persist('ugc8s_videoModelMode', videoModelMode);
     persist('ugc8s_jobs', jobs);
     persist('ugc8s_imageGenerationType', imageGenerationType);
     persist('ugc8s_imageOutputType', imageOutputType);
@@ -364,6 +374,7 @@ const App: React.FC = () => {
       if (endFrameGcsPath) formData.append('endFrameGcsPath', endFrameGcsPath);
 
       if (mode === ToolType.VIDEO_VEO) {
+        formData.append('videoModelMode', videoModelMode);
         formData.append('motionStyle', motionStyle);
         formData.append('aspectRatio', aspectRatio);
         formData.append('resolution', resolution);
@@ -409,7 +420,7 @@ const App: React.FC = () => {
   return (
     <>
       <div style={{ position: 'fixed', top: 8, right: 12, fontSize: 12, opacity: 0.7, zIndex: 9999, textAlign: 'right' }}>
-        <div className="font-mono text-xs text-gray-400">v2026-03-09-image-ui-refactor</div>
+        <div className="font-mono text-xs text-gray-400">v2026-03-09-video-engine-selector</div>
         {lastSavedTime && (
           <div className="text-green-400 text-[10px] flex items-center justify-end gap-1">
             <CheckCircle2 className="w-3 h-3" />
@@ -722,6 +733,29 @@ const App: React.FC = () => {
                       </>
                     ) : (
                       <>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-200">Video Engine</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {VIDEO_MODEL_MODES.map((item) => (
+                              <button
+                                key={item.value}
+                                type="button"
+                                onClick={() => setVideoModelMode(item.value)}
+                                className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                                  videoModelMode === item.value
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-surface border-white/10 text-white hover:border-white/25'
+                                }`}
+                              >
+                                <div className="font-medium">{item.label}</div>
+                                <div className={`text-xs mt-1 ${videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'}`}>
+                                  {item.description}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-200">Style Consistency</label>
                           <button
