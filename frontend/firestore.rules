@@ -1,0 +1,221 @@
+rules_version = '2';
+
+// ============================================================
+//  NEXUS STUDIO — Firestore Security Rules
+//  Versi: 2026-03-10
+//  Proyek: studio-2740779394-e22ec
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------------------------------
+    // HELPER FUNCTIONS
+    // --------------------------------------------------------
+
+    // Cek apakah user sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Cek apakah user mengakses dokumen miliknya sendiri
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Cek apakah request hanya mengubah field yang diizinkan
+    function onlyUpdates(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+
+    // Validasi field wajib ada dan bertipe benar
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Cek apakah string valid (tidak kosong, ada batas panjang)
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string
+        && request.resource.data[field].size() >= minLen
+        && request.resource.data[field].size() <= maxLen;
+    }
+
+    // Validasi format email sederhana
+    function isValidEmail() {
+      return isValidString('email', 5, 254)
+        && request.resource.data.email.matches('.*@.*\\..*');
+    }
+
+    // Validasi username: alfanumerik + underscore, 3-20 karakter
+    function isValidUsername() {
+      return isValidString('username', 3, 20)
+        && request.resource.data.username.matches('^[a-zA-Z0-9_]+$');
+    }
+
+    // Validasi nomor HP Indonesia
+    function isValidPhone() {
+      return isValidString('phone', 8, 15)
+        && (request.resource.data.phone.matches('^(\\+62|62|0)[0-9]{8,13}$'));
+    }
+
+
+    // --------------------------------------------------------
+    // COLLECTION: users
+    // Schema:
+    //   uid       (string)   - Firebase Auth UID
+    //   username  (string)   - Username unik, 3-20 karakter
+    //   email     (string)   - Email user
+    //   phone     (string)   - Nomor HP Indonesia
+    //   createdAt (timestamp)
+    //   updatedAt (timestamp)
+    //   role      (string)   - 'user' | 'admin'
+    //   plan      (string)   - 'free' | 'pro' | 'enterprise'
+    // --------------------------------------------------------
+    match /users/{userId} {
+
+      // READ: hanya pemilik yang bisa baca profilnya sendiri
+      allow read: if isOwner(userId);
+
+      // CREATE: hanya bisa membuat profil sendiri saat pertama daftar
+      allow create: if isOwner(userId)
+        && hasRequiredFields(['uid', 'username', 'email', 'phone', 'createdAt', 'updatedAt', 'role', 'plan'])
+        && isValidUsername()
+        && isValidEmail()
+        && isValidPhone()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role == 'user'       // role default harus 'user'
+        && request.resource.data.plan == 'free';      // plan default harus 'free'
+
+      // UPDATE: pemilik boleh update field tertentu (bukan uid, role, plan)
+      allow update: if isOwner(userId)
+        && onlyUpdates(['username', 'phone', 'updatedAt'])
+        && isValidUsername()
+        && isValidPhone();
+
+      // DELETE: tidak diizinkan dari client (hanya lewat Admin SDK)
+      allow delete: if false;
+    }
+
+
+    // --------------------------------------------------------
+    // COLLECTION: jobs
+    // Menyimpan generation jobs per user.
+    // Schema:
+    //   jobId       (string)
+    //   userId      (string)   - harus == request.auth.uid
+    //   toolType    (string)   - 'VIDEO_VEO' | 'IMAGE_NANO'
+    //   prompt      (string)
+    //   status      (string)   - 'queued' | 'running' | 'succeeded' | 'failed'
+    //   createdAt   (timestamp)
+    //   updatedAt   (timestamp)
+    //   resultUrl   (string, optional)
+    //   error       (string, optional)
+    // --------------------------------------------------------
+    match /jobs/{jobId} {
+
+      // READ: hanya pemilik job
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      // CREATE: user yang login bisa membuat job untuk dirinya sendiri
+      allow create: if isAuthenticated()
+        && hasRequiredFields(['jobId', 'userId', 'toolType', 'prompt', 'status', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.toolType in ['VIDEO_VEO', 'IMAGE_NANO']
+        && request.resource.data.status == 'queued'   // status awal harus 'queued'
+        && isValidString('prompt', 1, 5000);
+
+      // UPDATE: user boleh update status dan result (simulasi polling)
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && onlyUpdates(['status', 'resultUrl', 'error', 'updatedAt', 'result', 'provider', 'metadataJsonUrl']);
+
+      // DELETE: user boleh hapus job miliknya
+      allow delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+
+    // --------------------------------------------------------
+    // COLLECTION: usernames
+    // Index untuk memastikan username unik di seluruh platform.
+    // Schema:
+    //   uid       (string) - UID user yang memakai username ini
+    //   createdAt (timestamp)
+    // --------------------------------------------------------
+    match /usernames/{username} {
+
+      // READ: siapa pun bisa cek apakah username sudah dipakai
+      allow read: if isAuthenticated();
+
+      // CREATE: boleh claim username baru untuk diri sendiri
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && hasRequiredFields(['uid', 'createdAt']);
+
+      // UPDATE/DELETE: tidak diizinkan (username permanen)
+      allow update, delete: if false;
+    }
+
+
+    // --------------------------------------------------------
+    // COLLECTION: sessions (opsional, tracking login)
+    // Schema:
+    //   userId    (string)
+    //   loginAt   (timestamp)
+    //   userAgent (string)
+    //   ip        (string, server-side saja)
+    // --------------------------------------------------------
+    match /sessions/{sessionId} {
+
+      // READ: hanya pemilik
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      // CREATE: user yang login bisa buat session record
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && hasRequiredFields(['userId', 'loginAt']);
+
+      // UPDATE/DELETE: tidak diizinkan dari client
+      allow update, delete: if false;
+    }
+
+
+    // --------------------------------------------------------
+    // COLLECTION: feedback (opsional, user bisa kirim feedback)
+    // Schema:
+    //   userId    (string)
+    //   message   (string)
+    //   rating    (number, 1-5)
+    //   createdAt (timestamp)
+    // --------------------------------------------------------
+    match /feedback/{feedbackId} {
+
+      // CREATE: user yang login bisa kirim feedback
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && hasRequiredFields(['userId', 'message', 'createdAt'])
+        && isValidString('message', 5, 2000)
+        && (!('rating' in request.resource.data)
+            || (request.resource.data.rating is number
+                && request.resource.data.rating >= 1
+                && request.resource.data.rating <= 5));
+
+      // READ: hanya pemilik sendiri
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      // UPDATE/DELETE: tidak diizinkan
+      allow update, delete: if false;
+    }
+
+
+    // --------------------------------------------------------
+    // FALLBACK: blokir semua akses ke collection lain
+    // --------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
