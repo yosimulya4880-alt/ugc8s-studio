@@ -77,6 +77,14 @@ const IMAGE_ASPECT_RATIOS = [
 
 const IMAGE_RESOLUTIONS = ['1K', '2K', '4K'] as const;
 
+const VIDEO_GENERATION_TYPES = [
+  { value: 'text', label: 'Text to Video', description: 'Generate a video from prompt only.' },
+  { value: 'image', label: 'Image to Video', description: 'Use one main image as the starting visual reference.' },
+  { value: 'frames', label: 'Start / End Frame', description: 'Generate motion between a start frame and an end frame.' },
+] as const;
+
+type VideoGenerationType = typeof VIDEO_GENERATION_TYPES[number]['value'];
+
 const loadState = <T,>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') return fallback;
   try {
@@ -99,7 +107,6 @@ type VideoModelMode = typeof VIDEO_MODEL_MODES[number]['value'];
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<ToolType>(() => loadState('ugc8s_mode', ToolType.VIDEO_VEO));
-  const [useMock, setUseMock] = useState(() => loadState('ugc8s_use_mock', false));
   const [apiToken, setApiToken] = useState(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('ugc8s_api_token') || '';
@@ -174,6 +181,7 @@ const App: React.FC = () => {
   const [resolution, setResolution] = useState(() => loadState('ugc8s_resolution', '720p'));
   const [durationSeconds, setDurationSeconds] = useState(() => loadState('ugc8s_durationSeconds', '8'));
   const [videoModelMode, setVideoModelMode] = useState<VideoModelMode>(() => loadState('ugc8s_videoModelMode', 'fast'));
+  const [videoGenerationType, setVideoGenerationType] = useState<VideoGenerationType>(() => loadState('ugc8s_videoGenerationType', 'text'));
   const [promptGen, setPromptGen] = useState(DEFAULT_PROMPT_GENERATOR_STATE);
 
   const [imageGenerationType, setImageGenerationType] = useState<ImageGenerationType>(() => loadState('ugc8s_imageGenerationType', 'text'));
@@ -201,7 +209,6 @@ const App: React.FC = () => {
 
   useEffect(() => persist('ugc8s_mode', mode), [mode, persist]);
   useEffect(() => persist('ugc8s_section', section), [section, persist]);
-  useEffect(() => persist('ugc8s_use_mock', useMock), [useMock, persist]);
   useEffect(() => persist('ugc8s_prompt', prompt), [prompt, persist]);
   useEffect(() => persist('ugc8s_negativePrompt', negativePrompt), [negativePrompt, persist]);
   useEffect(() => persist('ugc8s_styleLock', styleLock), [styleLock, persist]);
@@ -211,6 +218,7 @@ const App: React.FC = () => {
   useEffect(() => persist('ugc8s_resolution', resolution), [resolution, persist]);
   useEffect(() => persist('ugc8s_durationSeconds', durationSeconds), [durationSeconds, persist]);
   useEffect(() => persist('ugc8s_videoModelMode', videoModelMode), [videoModelMode, persist]);
+  useEffect(() => persist('ugc8s_videoGenerationType', videoGenerationType), [videoGenerationType, persist]);
   useEffect(() => persist('ugc8s_imageGenerationType', imageGenerationType), [imageGenerationType, persist]);
   useEffect(() => persist('ugc8s_imageOutputType', imageOutputType), [imageOutputType, persist]);
   useEffect(() => persist('ugc8s_imageVisualStyle', imageVisualStyle), [imageVisualStyle, persist]);
@@ -230,9 +238,9 @@ const App: React.FC = () => {
 
   const saveCheckpoint = () => {
     persist('ugc8s_mode', mode);
-    persist('ugc8s_use_mock', useMock);
     persist('ugc8s_prompt', prompt);
     persist('ugc8s_videoModelMode', videoModelMode);
+    persist('ugc8s_videoGenerationType', videoGenerationType);
     persist('ugc8s_jobs', jobs);
     persist('ugc8s_imageGenerationType', imageGenerationType);
     persist('ugc8s_imageOutputType', imageOutputType);
@@ -317,9 +325,21 @@ const App: React.FC = () => {
       return;
     }
 
-    const effectiveUseMock = mode === ToolType.VIDEO_VEO ? useMock : false;
+    const effectiveUseMock = false;
     const isImageMode = mode === ToolType.IMAGE_NANO;
     const isReferenceImageMode = isImageMode && imageGenerationType === 'reference';
+
+    if (mode === ToolType.VIDEO_VEO) {
+      if (videoGenerationType === 'image' && !heroImage) {
+        alert('Please upload a main image for Image to Video mode.');
+        return;
+      }
+
+      if (videoGenerationType === 'frames' && (!startFrame || !endFrame)) {
+        alert('Please upload both Start Frame and End Frame.');
+        return;
+      }
+    }
 
     if (isReferenceImageMode && !heroImage && referenceImages.length === 0) {
       alert('Untuk Reference-based Image, upload minimal 1 gambar referensi.');
@@ -346,11 +366,17 @@ const App: React.FC = () => {
       let endFrameGcsPath: string | null = null;
 
       if (!effectiveUseMock) {
-        if (heroImage && (!isImageMode || isReferenceImageMode)) {
+        if (
+          heroImage &&
+          (
+            (isImageMode && isReferenceImageMode) ||
+            (mode === ToolType.VIDEO_VEO && videoGenerationType === 'image')
+          )
+        ) {
           heroImageGcsPath = await uploadToGcs(heroImage, clientJobId, 'hero');
         }
 
-        const refsToUpload = isImageMode && !isReferenceImageMode ? [] : referenceImages.slice(0, 3);
+        const refsToUpload = isImageMode && isReferenceImageMode ? referenceImages : [];
         for (const f of refsToUpload) {
           referenceImageGcsPaths.push(await uploadToGcs(f, clientJobId, 'ref'));
         }
@@ -375,6 +401,7 @@ const App: React.FC = () => {
 
       if (mode === ToolType.VIDEO_VEO) {
         formData.append('videoModelMode', videoModelMode);
+        formData.append('videoGenerationType', videoGenerationType);
         formData.append('motionStyle', motionStyle);
         formData.append('aspectRatio', aspectRatio);
         formData.append('resolution', resolution);
@@ -420,7 +447,7 @@ const App: React.FC = () => {
   return (
     <>
       <div style={{ position: 'fixed', top: 8, right: 12, fontSize: 12, opacity: 0.7, zIndex: 9999, textAlign: 'right' }}>
-        <div className="font-mono text-xs text-gray-400">v2026-03-09-video-engine-selector</div>
+        <div className="font-mono text-xs text-gray-400">v2026-03-10-video-layout-refactor</div>
         {lastSavedTime && (
           <div className="text-green-400 text-[10px] flex items-center justify-end gap-1">
             <CheckCircle2 className="w-3 h-3" />
@@ -436,7 +463,7 @@ const App: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white">
                 <Zap className="w-5 h-5" fill="currentColor" />
               </div>
-              UGC8s
+              Nexus Studio
             </div>
             <p className="text-xs text-gray-500 mt-1 ml-10">Creative Studio</p>
           </div>
@@ -546,115 +573,286 @@ const App: React.FC = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {mode === ToolType.IMAGE_NANO && (
-                    <div className="space-y-3">
-                      <label className="block text-sm font-medium text-gray-200">Generation Type</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {IMAGE_GENERATION_TYPES.map((option) => (
+                  {mode === ToolType.VIDEO_VEO && (
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium text-gray-200">Video Generation Type</label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {VIDEO_GENERATION_TYPES.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setVideoGenerationType(option.value)}
+                              className={`rounded-2xl border p-4 text-left transition-all ${
+                                videoGenerationType === option.value
+                                  ? 'border-white bg-white text-black'
+                                  : 'border-white/10 bg-white/5 text-white hover:border-white/25'
+                              }`}
+                            >
+                              <div className="font-medium">{option.label}</div>
+                              <div className={`text-xs mt-1 ${videoGenerationType === option.value ? 'text-black/70' : 'text-gray-400'}`}>
+                                {option.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <PromptGeneratorPanel
+                        mode="video"
+                        value={promptGen}
+                        onChange={setPromptGen}
+                        currentPrompt={prompt}
+                        onInsert={setPrompt}
+                        onReset={() => setPromptGen(DEFAULT_PROMPT_GENERATOR_STATE)}
+                      />
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-200">
+                          Prompt <span className="text-primary">*</span>
+                        </label>
+                        <textarea
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          placeholder="Describe your video in detail..."
+                          className="w-full h-32 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-200">Negative Prompt</label>
+                        <textarea
+                          value={negativePrompt}
+                          onChange={(e) => setNegativePrompt(e.target.value)}
+                          placeholder="What to avoid in the generated video..."
+                          className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
+                        />
+                        <p className="text-xs text-gray-500">Isi negative prompt akan otomatis ditambahkan saat proses generate.</p>
+                      </div>
+
+                      {videoGenerationType === 'image' && (
+                        <FileUploader
+                          label="Main Image"
+                          required
+                          onChange={(files) => setHeroImage(files[0] || null)}
+                          description="Upload one main image to generate a video from it."
+                        />
+                      )}
+
+                      {videoGenerationType === 'frames' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FileUploader
+                            label="Start Frame"
+                            required
+                            onChange={(files) => setStartFrame(files[0] || null)}
+                            description="Upload the opening frame."
+                          />
+                          <FileUploader
+                            label="End Frame"
+                            required
+                            onChange={(files) => setEndFrame(files[0] || null)}
+                            description="Upload the ending frame."
+                          />
+                        </div>
+                      )}
+
+                      <div className="rounded-2xl border border-white/10 bg-black/10 p-5 space-y-5">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div>
+                            <h3 className="font-semibold text-white">Video Settings</h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Choose engine, style, and output preferences.
+                            </p>
+                          </div>
+
                           <button
-                            key={option.value}
                             type="button"
-                            onClick={() => setImageGenerationType(option.value)}
-                            className={`rounded-2xl border p-4 text-left transition-all ${
-                              imageGenerationType === option.value
-                                ? 'border-white bg-white text-black'
-                                : 'border-white/10 bg-white/5 text-white hover:border-white/25'
+                            onClick={() => setStyleLock(!styleLock)}
+                            className={`inline-flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border transition-all ${
+                              styleLock
+                                ? 'bg-primary/10 border-primary/50 text-primary'
+                                : 'bg-surface border-white/10 text-gray-400'
                             }`}
                           >
-                            <div className="font-medium">{option.label}</div>
-                            <div className={`text-xs mt-1 ${imageGenerationType === option.value ? 'text-black/70' : 'text-gray-400'}`}>
-                              {option.description}
+                            <span className="flex items-center gap-2">
+                              <Lock className="w-4 h-4" />
+                              Style Lock
+                            </span>
+                            <div className={`w-8 h-4 rounded-full relative transition-colors ${styleLock ? 'bg-primary' : 'bg-gray-600'}`}>
+                              <div
+                                className="absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform"
+                                style={{ left: styleLock ? 'calc(100% - 14px)' : '2px' }}
+                              />
                             </div>
                           </button>
-                        ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-200">Video Engine</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {VIDEO_MODEL_MODES.map((item) => (
+                                <button
+                                  key={item.value}
+                                  type="button"
+                                  onClick={() => setVideoModelMode(item.value)}
+                                  className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                                    videoModelMode === item.value
+                                      ? 'bg-white text-black border-white'
+                                      : 'bg-surface border-white/10 text-white hover:border-white/25'
+                                  }`}
+                                >
+                                  <div className="font-medium">{item.label}</div>
+                                  <div className={`text-xs mt-1 ${videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'}`}>
+                                    {item.description}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-200">Video Style</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {Object.values(MotionStyle).map((style) => (
+                                <button
+                                  key={style}
+                                  type="button"
+                                  onClick={() => setMotionStyle(style)}
+                                  className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                                    motionStyle === style
+                                      ? 'bg-white text-black border-white font-medium'
+                                      : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                                  }`}
+                                >
+                                  {style.charAt(0).toUpperCase() + style.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
+                            <select
+                              value={aspectRatio}
+                              onChange={(e) => setAspectRatio(e.target.value)}
+                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+                            >
+                              <option value="16:9">16:9</option>
+                              <option value="9:16">9:16</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-200">Resolution</label>
+                            <select
+                              value={resolution}
+                              onChange={(e) => setResolution(e.target.value)}
+                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+                            >
+                              <option value="720p">720p</option>
+                              <option value="1080p">1080p</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-200">Duration</label>
+                            <select
+                              value={durationSeconds}
+                              onChange={(e) => setDurationSeconds(e.target.value)}
+                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
+                            >
+                              <option value="4">4 sec</option>
+                              <option value="6">6 sec</option>
+                              <option value="8">8 sec</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-200">
-                      Prompt <span className="text-primary">*</span>
-                    </label>
-                    <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Describe your vision in detail..."
-                      className="w-full h-32 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
-                      required
-                    />
-                  </div>
+                  {mode === ToolType.IMAGE_NANO && (
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium text-gray-200">Generation Type</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {IMAGE_GENERATION_TYPES.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setImageGenerationType(option.value)}
+                              className={`rounded-2xl border p-4 text-left transition-all ${
+                                imageGenerationType === option.value
+                                  ? 'border-white bg-white text-black'
+                                  : 'border-white/10 bg-white/5 text-white hover:border-white/25'
+                              }`}
+                            >
+                              <div className="font-medium">{option.label}</div>
+                              <div className={`text-xs mt-1 ${imageGenerationType === option.value ? 'text-black/70' : 'text-gray-400'}`}>
+                                {option.description}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-200">Negative Prompt</label>
-                    <textarea
-                      value={negativePrompt}
-                      onChange={(e) => setNegativePrompt(e.target.value)}
-                      placeholder={mode === ToolType.VIDEO_VEO ? 'What to avoid in the generated video...' : 'What to avoid in the generated image...'}
-                      className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
-                    />
-                    <p className="text-xs text-gray-500">Isi negative prompt akan otomatis ditambahkan saat proses generate.</p>
-                  </div>
-
-                  <PromptGeneratorPanel
-                    mode={mode === ToolType.VIDEO_VEO ? 'video' : 'image'}
-                    value={promptGen}
-                    onChange={setPromptGen}
-                    currentPrompt={prompt}
-                    onInsert={setPrompt}
-                    onReset={() => setPromptGen(DEFAULT_PROMPT_GENERATOR_STATE)}
-                  />
-
-                  {mode === ToolType.IMAGE_NANO && imageGenerationType === 'reference' && (
-                    <>
-                      <FileUploader
-                        label="Primary Reference Image"
-                        required={referenceImages.length === 0}
-                        onChange={(files) => setHeroImage(files[0] || null)}
-                        description="Optional if you already upload reference images below. Use this for the main subject or style anchor."
-                      />
-
-                      <FileUploader
-                        label="Reference Images"
-                        multiple
-                        maxFiles={3}
-                        onChange={setReferenceImages}
-                        description="Combine up to 3 additional images for subject, style, color, or scene guidance."
-                      />
-                    </>
-                  )}
-
-                  {mode === ToolType.VIDEO_VEO && (
-                    <>
-                      <FileUploader
-                        label="Hero Image (Optional)"
-                        onChange={(files) => setHeroImage(files[0] || null)}
-                        description="Optional. Bisa dikosongkan untuk text-to-video."
-                      />
-
-                      <FileUploader
-                        label="Reference Images"
-                        multiple
-                        maxFiles={3}
-                        onChange={setReferenceImages}
-                        description="Up to 3 additional images for context."
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FileUploader
-                          label="Start Frame (Optional)"
-                          onChange={(files) => setStartFrame(files[0] || null)}
-                        />
-                        <FileUploader
-                          label="End Frame (Optional)"
-                          onChange={(files) => setEndFrame(files[0] || null)}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-200">
+                          Prompt <span className="text-primary">*</span>
+                        </label>
+                        <textarea
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          placeholder="Describe your vision in detail..."
+                          className="w-full h-32 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
+                          required
                         />
                       </div>
-                    </>
-                  )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {mode === ToolType.IMAGE_NANO ? (
-                      <>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-200">Negative Prompt</label>
+                        <textarea
+                          value={negativePrompt}
+                          onChange={(e) => setNegativePrompt(e.target.value)}
+                          placeholder="What to avoid in the generated image..."
+                          className="w-full h-24 bg-surface border border-white/10 rounded-xl p-4 text-white placeholder:text-gray-600 focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none transition-all"
+                        />
+                        <p className="text-xs text-gray-500">Isi negative prompt akan otomatis ditambahkan saat proses generate.</p>
+                      </div>
+
+                      <PromptGeneratorPanel
+                        mode="image"
+                        value={promptGen}
+                        onChange={setPromptGen}
+                        currentPrompt={prompt}
+                        onInsert={setPrompt}
+                        onReset={() => setPromptGen(DEFAULT_PROMPT_GENERATOR_STATE)}
+                      />
+
+                      {imageGenerationType === 'reference' && (
+                        <>
+                          <FileUploader
+                            label="Primary Reference Image"
+                            required={referenceImages.length === 0}
+                            onChange={(files) => setHeroImage(files[0] || null)}
+                            description="Optional if you already upload reference images below. Use this for the main subject or style anchor."
+                          />
+
+                          <FileUploader
+                            label="Reference Images"
+                            multiple
+                            maxFiles={3}
+                            onChange={setReferenceImages}
+                            description="Combine up to 3 additional images for subject, style, color, or scene guidance."
+                          />
+                        </>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-200">Output Type</label>
                           <select
@@ -730,136 +928,6 @@ const App: React.FC = () => {
                             </div>
                           </button>
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-200">Video Engine</label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {VIDEO_MODEL_MODES.map((item) => (
-                              <button
-                                key={item.value}
-                                type="button"
-                                onClick={() => setVideoModelMode(item.value)}
-                                className={`rounded-xl border px-4 py-3 text-left transition-all ${
-                                  videoModelMode === item.value
-                                    ? 'bg-white text-black border-white'
-                                    : 'bg-surface border-white/10 text-white hover:border-white/25'
-                                }`}
-                              >
-                                <div className="font-medium">{item.label}</div>
-                                <div className={`text-xs mt-1 ${videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'}`}>
-                                  {item.description}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-200">Style Consistency</label>
-                          <button
-                            type="button"
-                            onClick={() => setStyleLock(!styleLock)}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg border transition-all ${
-                              styleLock
-                                ? 'bg-primary/10 border-primary/50 text-primary'
-                                : 'bg-surface border-white/10 text-gray-400'
-                            }`}
-                          >
-                            <span className="flex items-center gap-2">
-                              <Lock className="w-4 h-4" />
-                              Style Lock
-                            </span>
-                            <div className={`w-8 h-4 rounded-full relative transition-colors ${styleLock ? 'bg-primary' : 'bg-gray-600'}`}>
-                              <div
-                                className="absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform"
-                                style={{ left: styleLock ? 'calc(100% - 14px)' : '2px' }}
-                              />
-                            </div>
-                          </button>
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-200">Video Style</label>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {Object.values(MotionStyle).map((style) => (
-                              <button
-                                key={style}
-                                type="button"
-                                onClick={() => setMotionStyle(style)}
-                                className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                                  motionStyle === style
-                                    ? 'bg-white text-black border-white font-medium'
-                                    : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                                }`}
-                              >
-                                {style.charAt(0).toUpperCase() + style.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 md:col-span-2">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
-                            <select
-                              value={aspectRatio}
-                              onChange={(e) => setAspectRatio(e.target.value)}
-                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                            >
-                              <option value="16:9">16:9</option>
-                              <option value="9:16">9:16</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-200">Resolution</label>
-                            <select
-                              value={resolution}
-                              onChange={(e) => setResolution(e.target.value)}
-                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                            >
-                              <option value="720p">720p</option>
-                              <option value="1080p">1080p</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-200">Duration</label>
-                            <select
-                              value={durationSeconds}
-                              onChange={(e) => setDurationSeconds(e.target.value)}
-                              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2.5 text-white focus:border-primary outline-none"
-                            >
-                              <option value="4">4 sec</option>
-                              <option value="6">6 sec</option>
-                              <option value="8">8 sec</option>
-                            </select>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {mode === ToolType.VIDEO_VEO && (
-                    <div className="pt-4 border-t border-white/10">
-                      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-white">Mock mode</div>
-                          <div className="text-xs text-gray-400">
-                            ON: finalize dummy (testing). OFF: upload input ke GCS + generate.
-                          </div>
-                        </div>
-                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={useMock}
-                            onChange={(e) => setUseMock(e.target.checked)}
-                            className="h-4 w-4 accent-primary"
-                          />
-                          <span className="text-sm text-gray-200">{useMock ? 'ON' : 'OFF'}</span>
-                        </label>
                       </div>
                     </div>
                   )}
