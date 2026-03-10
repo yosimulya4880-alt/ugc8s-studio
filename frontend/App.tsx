@@ -688,54 +688,56 @@ const App: React.FC = () => {
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          <div className="space-y-2 h-full flex flex-col">
-                            <label className="block text-sm font-medium text-gray-200">Video Engine</label>
-                            <div className="grid grid-cols-2 gap-2 flex-1">
-                              {VIDEO_MODEL_MODES.map((item) => (
-                                <button
-                                  key={item.value}
-                                  type="button"
-                                  onClick={() => setVideoModelMode(item.value)}
-                                  className={`h-full min-h-[116px] rounded-xl border px-4 py-4 text-left transition-all flex flex-col justify-between ${
-                                    videoModelMode === item.value
-                                      ? 'bg-white text-black border-white'
-                                      : 'bg-surface border-white/10 text-white hover:border-white/25'
-                                  }`}
-                                >
-                                  <div className="font-medium">{item.label}</div>
-                                  <div className={`text-xs mt-2 leading-5 ${videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'}`}>
-                                    {item.description}
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  <div className="space-y-2 h-full flex flex-col">
+    <label className="block text-sm font-medium text-gray-200">Video Engine</label>
+    <div className="grid grid-cols-2 gap-2 flex-1">
+      {VIDEO_MODEL_MODES.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          onClick={() => setVideoModelMode(item.value)}
+          className={`h-full min-h-[116px] rounded-xl border px-4 py-4 text-left transition-all flex flex-col justify-between ${
+            videoModelMode === item.value
+              ? 'bg-white text-black border-white'
+              : 'bg-surface border-white/10 text-white hover:border-white/25'
+          }`}
+        >
+          <div className="font-medium">{item.label}</div>
+          <div
+            className={`text-xs mt-2 leading-5 ${
+              videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'
+            }`}
+          >
+            {item.description}
+          </div>
+        </button>
+      ))}
+    </div>
+  </div>
 
-                          <div className="space-y-2 h-full flex flex-col">
-                            <label className="block text-sm font-medium text-gray-200">Video Style</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {Object.values(MotionStyle).map((style) => (
-                                <button
-                                  key={style}
-                                  type="button"
-                                  onClick={() => setMotionStyle(style)}
-                                  className={`w-full px-3 py-3 rounded-lg text-sm border transition-all ${
-                                    motionStyle === style
-                                      ? 'bg-white text-black border-white font-medium'
-                                      : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-                                  }`}
-                                >
-                                  {style === 'slowmotion'
-                                    ? 'Slow Motion'
-                                    : style.charAt(0).toUpperCase() + style.slice(1)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        </div>
-
+  <div className="space-y-2 h-full flex flex-col">
+    <label className="block text-sm font-medium text-gray-200">Video Style</label>
+    <div className="grid grid-cols-2 gap-2 flex-1">
+      {Object.values(MotionStyle).map((style) => (
+        <button
+          key={style}
+          type="button"
+          onClick={() => setMotionStyle(style)}
+          className={`w-full min-h-[52px] px-3 py-3 rounded-lg text-sm border transition-all ${
+            motionStyle === style
+              ? 'bg-white text-black border-white font-medium'
+              : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+          }`}
+        >
+          {style === 'slowmotion'
+            ? 'Slow Motion'
+            : style.charAt(0).toUpperCase() + style.slice(1)}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
