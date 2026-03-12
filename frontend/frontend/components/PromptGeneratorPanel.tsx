@@ -12,6 +12,12 @@ import {
   PromptGeneratorState,
   SHOT_TYPE_PRESETS,
   STYLE_PRESETS,
+  AUDIO_TYPE_PRESETS,
+  DELIVERY_STYLE_PRESETS,
+  AUDIO_TONE_PRESETS,
+  AUDIO_PACING_PRESETS,
+  SPEAKER_COUNT_PRESETS,
+  LANGUAGE_STYLE_PRESETS,
 } from '../services/prompt-utils';
 
 type Props = {
@@ -42,32 +48,13 @@ export default function PromptGeneratorPanel({
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-4 md:p-6 space-y-5">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h3 className="text-lg md:text-xl font-semibold">Prompt Generator</h3>
-          <p className="text-sm text-white/60">
-            {isVideo
-              ? 'Builder cepat untuk video prompt tanpa mengubah pipeline generate.'
-              : 'Builder cepat untuk image prompt tanpa mengubah pipeline generate.'}
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onInsert(generated)}
-            className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            Replace Prompt
-          </button>
-          <button
-            type="button"
-            onClick={() => onInsert(mergePrompt(currentPrompt, generated))}
-            className="rounded-xl bg-white text-black px-4 py-2 text-sm font-medium hover:opacity-90"
-          >
-            Insert to Prompt
-          </button>
-        </div>
+      <div className="space-y-2">
+        <h3 className="text-lg md:text-xl font-semibold">Prompt Generator</h3>
+        <p className="text-sm text-white/60">
+          {isVideo
+            ? 'Builder cepat untuk video prompt tanpa mengubah pipeline generate.'
+            : 'Builder cepat untuk image prompt tanpa mengubah pipeline generate.'}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -83,36 +70,42 @@ export default function PromptGeneratorPanel({
           </select>
         </div>
 
-        {isVideo && (
-          <div className="space-y-2">
-            <label className="text-sm text-white/75">Style</label>
-            <select
-              value={value.style}
-              onChange={(e) => onChange({ ...value, style: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
-            >
-              <option value="">Select style</option>
-              {STYLE_PRESETS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="space-y-2">
+          <label className="text-sm text-white/75">Style</label>
+          <select
+            value={value.style}
+            onChange={(e) => onChange({ ...value, style: e.target.value })}
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+          >
+            <option value="">Select style</option>
+            {STYLE_PRESETS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <TextField
           label="Subject"
           value={value.subject}
           onChange={(next) => onChange({ ...value, subject: next })}
-          placeholder={isVideo ? 'A woman holding a coffee cup' : 'A premium product placed on a clean studio set'}
+          placeholder={
+            isVideo
+              ? 'A woman holding a coffee cup'
+              : 'A premium product placed on a clean studio set'
+          }
         />
 
         <TextField
           label="Setting / Location"
           value={value.setting}
           onChange={(next) => onChange({ ...value, setting: next })}
-          placeholder={isVideo ? 'Traditional kitchen, warm morning light' : 'Minimal studio background, soft ambient light'}
+          placeholder={
+            isVideo
+              ? 'Traditional kitchen, warm morning light'
+              : 'Minimal studio background, soft ambient light'
+          }
         />
 
         <div className="space-y-2">
@@ -227,14 +220,156 @@ export default function PromptGeneratorPanel({
             </div>
           </div>
 
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4 space-y-4">
+            <div className="space-y-1">
+              <h4 className="font-medium text-white">Audio Builder</h4>
+              <p className="text-xs text-white/55">
+                Bantu arahkan gaya suara, dialog, narasi, dan ambience untuk video.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Audio Type</label>
+                <select
+                  value={value.audioType}
+                  onChange={(e) => onChange({ ...value, audioType: e.target.value as PromptGeneratorState['audioType'] })}
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select audio type</option>
+                  {AUDIO_TYPE_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Delivery Style</label>
+                <select
+                  value={value.deliveryStyle}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      deliveryStyle: e.target.value as PromptGeneratorState['deliveryStyle'],
+                    })
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select delivery style</option>
+                  {DELIVERY_STYLE_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Tone</label>
+                <select
+                  value={value.audioTone}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      audioTone: e.target.value as PromptGeneratorState['audioTone'],
+                    })
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select tone</option>
+                  {AUDIO_TONE_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Pacing</label>
+                <select
+                  value={value.audioPacing}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      audioPacing: e.target.value as PromptGeneratorState['audioPacing'],
+                    })
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select pacing</option>
+                  {AUDIO_PACING_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Speaker Count</label>
+                <select
+                  value={value.speakerCount}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      speakerCount: e.target.value as PromptGeneratorState['speakerCount'],
+                    })
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select speaker count</option>
+                  {SPEAKER_COUNT_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-white/75">Language Style</label>
+                <select
+                  value={value.languageStyle}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      languageStyle: e.target.value as PromptGeneratorState['languageStyle'],
+                    })
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                >
+                  <option value="">Select language style</option>
+                  {LANGUAGE_STYLE_PRESETS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <TextAreaField
             label="Audio / Dialogue Direction"
             value={value.extraDetails}
             onChange={(next) => onChange({ ...value, extraDetails: next })}
-            placeholder={'0.0-2.0s Narrator: "Hai teman"\n2.1-5.0s Speaker 2: "Halo juga"\nBackground audio: soft café ambience'}
-            rows={4}
+            placeholder={`0.0-2.0s Narrator: "Hai teman"\n2.1-5.0s Speaker 2: "Halo juga"\nBackground audio: soft café ambience\nSFX: subtle steam, cup placement`}
+            rows={5}
           />
         </>
+      )}
+
+      {!isVideo && (
+        <TextAreaField
+          label="Composition / Extra Direction"
+          value={value.extraDetails}
+          onChange={(next) => onChange({ ...value, extraDetails: next })}
+          placeholder="Clean composition, premium framing, balanced negative space, strong focal point"
+          rows={4}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-4">
@@ -243,7 +378,7 @@ export default function PromptGeneratorPanel({
           <textarea
             value={generated}
             readOnly
-            rows={8}
+            rows={9}
             className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-3"
           />
         </div>
@@ -256,6 +391,22 @@ export default function PromptGeneratorPanel({
           className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/10"
         >
           Reset Builder
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onInsert(generated)}
+          className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/10"
+        >
+          Replace Prompt
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onInsert(mergePrompt(currentPrompt, generated))}
+          className="rounded-xl bg-white text-black px-4 py-2 text-sm font-medium hover:opacity-90"
+        >
+          Insert to Prompt
         </button>
       </div>
     </div>
