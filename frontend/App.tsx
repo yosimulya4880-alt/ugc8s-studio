@@ -21,7 +21,9 @@ import {
   Lock,
   Save,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const IMAGE_GENERATION_TYPES = [
@@ -113,6 +115,7 @@ const App: React.FC = () => {
   });
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [section, setSection] = useState<AppSection>(() => loadState('ugc8s_section', 'studio'));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [jobs, setJobs] = useState<Job[]>(() => {
     const loaded = loadState<Job[]>('ugc8s_jobs', []);
@@ -235,6 +238,8 @@ const App: React.FC = () => {
       setLastSavedTime(new Date().toLocaleTimeString());
     }
   }, [apiToken]);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const saveCheckpoint = () => {
     persist('ugc8s_mode', mode);
@@ -447,7 +452,7 @@ const App: React.FC = () => {
   return (
     <>
       <div style={{ position: 'fixed', top: 8, right: 12, fontSize: 12, opacity: 0.7, zIndex: 9999, textAlign: 'right' }}>
-        <div className="font-mono text-xs text-gray-400">v2026-03-10-video-layout-refactor</div>
+        <div className="font-mono text-xs text-gray-400">v2026-03-10-mobile-shell</div>
         {lastSavedTime && (
           <div className="text-green-400 text-[10px] flex items-center justify-end gap-1">
             <CheckCircle2 className="w-3 h-3" />
@@ -456,8 +461,164 @@ const App: React.FC = () => {
         )}
       </div>
 
-      <div className="flex h-screen overflow-hidden bg-background text-white">
-        <aside className="w-64 border-r border-white/10 bg-surface flex flex-col">
+      <div className="min-h-screen lg:h-screen bg-background text-white flex flex-col lg:flex-row overflow-hidden">
+        <div className="lg:hidden sticky top-0 z-40 border-b border-white/10 bg-surface/95 backdrop-blur-sm">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-bold text-lg">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white">
+                  <Zap className="w-5 h-5" fill="currentColor" />
+                </div>
+                Nexus Studio
+              </div>
+              <p className="text-[11px] text-gray-500 ml-10">Creative Studio</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/10 bg-white/5 text-white"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {mobileMenuOpen && (
+          <div
+            className="lg:hidden fixed inset-0 z-50 bg-black/60"
+            onClick={closeMobileMenu}
+          />
+        )}
+
+        <aside
+          className={`lg:hidden fixed inset-y-0 left-0 z-50 w-80 max-w-[88vw] border-r border-white/10 bg-surface flex flex-col transform transition-transform duration-300 ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="p-5 border-b border-white/10 flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-bold text-xl">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white">
+                  <Zap className="w-5 h-5" fill="currentColor" />
+                </div>
+                Nexus Studio
+              </div>
+              <p className="text-xs text-gray-500 mt-1 ml-10">Creative Studio</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeMobileMenu}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-white/10 bg-white/5 text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button
+              onClick={() => {
+                setSection('studio');
+                setMode(ToolType.VIDEO_VEO);
+                closeMobileMenu();
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                section === 'studio' && mode === ToolType.VIDEO_VEO
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Video className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Video Mode</div>
+                <div className="text-xs opacity-70">Veo Model</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setSection('studio');
+                setMode(ToolType.IMAGE_NANO);
+                closeMobileMenu();
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                section === 'studio' && mode === ToolType.IMAGE_NANO
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <ImageIcon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Image Mode</div>
+                <div className="text-xs opacity-70">Nano Model</div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setSection('kling');
+                closeMobileMenu();
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                section === 'kling'
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Video className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">Kling.AI</div>
+                <div className="text-xs opacity-70">Coming Soon</div>
+              </div>
+            </button>
+          </nav>
+
+          <div className="p-4 border-t border-white/10 space-y-2">
+            <button
+              onClick={() => setShowTokenInput(!showTokenInput)}
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors w-full px-2 py-1"
+            >
+              <Settings2 className="w-3 h-3" />
+              API Configuration
+            </button>
+            {showTokenInput && (
+              <div className="mb-2">
+                <input
+                  type="password"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="w-full bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-gray-300 focus:border-primary outline-none"
+                  placeholder="Bearer Token"
+                />
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                saveCheckpoint();
+                closeMobileMenu();
+              }}
+              className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 transition-colors w-full px-2 py-1 hover:bg-green-500/10 rounded border border-green-500/20"
+            >
+              <Save className="w-3 h-3" />
+              Save Checkpoint
+            </button>
+
+            <button
+              onClick={() => {
+                clearHistory();
+                closeMobileMenu();
+              }}
+              className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 transition-colors w-full px-2 py-1 hover:bg-red-500/10 rounded border border-red-500/20"
+            >
+              <Trash2 className="w-3 h-3" />
+              Clear History
+            </button>
+          </div>
+        </aside>
+
+        <aside className="hidden lg:flex w-64 border-r border-white/10 bg-surface flex-col">
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-2 text-primary font-bold text-xl">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white">
@@ -560,8 +721,8 @@ const App: React.FC = () => {
         </aside>
 
         {section === 'studio' ? (
-          <main className="flex-1 flex overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-8 border-r border-white/10 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <main className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 lg:border-r border-white/10 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent min-h-0">
               <div className="max-w-2xl mx-auto space-y-8">
                 <div>
                   <h1 className="text-2xl font-bold mb-2">
@@ -688,56 +849,57 @@ const App: React.FC = () => {
                           </button>
                         </div>
 
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-  <div className="space-y-2 h-full flex flex-col">
-    <label className="block text-sm font-medium text-gray-200">Video Engine</label>
-    <div className="grid grid-cols-2 gap-2 flex-1">
-      {VIDEO_MODEL_MODES.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          onClick={() => setVideoModelMode(item.value)}
-          className={`h-full min-h-[116px] rounded-xl border px-4 py-4 text-left transition-all flex flex-col justify-between ${
-            videoModelMode === item.value
-              ? 'bg-white text-black border-white'
-              : 'bg-surface border-white/10 text-white hover:border-white/25'
-          }`}
-        >
-          <div className="font-medium">{item.label}</div>
-          <div
-            className={`text-xs mt-2 leading-5 ${
-              videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'
-            }`}
-          >
-            {item.description}
-          </div>
-        </button>
-      ))}
-    </div>
-  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="space-y-2 h-full flex flex-col">
+                            <label className="block text-sm font-medium text-gray-200">Video Engine</label>
+                            <div className="grid grid-cols-2 gap-2 flex-1">
+                              {VIDEO_MODEL_MODES.map((item) => (
+                                <button
+                                  key={item.value}
+                                  type="button"
+                                  onClick={() => setVideoModelMode(item.value)}
+                                  className={`h-full min-h-[116px] rounded-xl border px-4 py-4 text-left transition-all flex flex-col justify-between ${
+                                    videoModelMode === item.value
+                                      ? 'bg-white text-black border-white'
+                                      : 'bg-surface border-white/10 text-white hover:border-white/25'
+                                  }`}
+                                >
+                                  <div className="font-medium">{item.label}</div>
+                                  <div
+                                    className={`text-xs mt-2 leading-5 ${
+                                      videoModelMode === item.value ? 'text-black/70' : 'text-gray-400'
+                                    }`}
+                                  >
+                                    {item.description}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-  <div className="space-y-2 h-full flex flex-col">
-    <label className="block text-sm font-medium text-gray-200">Video Style</label>
-    <div className="grid grid-cols-2 gap-2 flex-1">
-      {Object.values(MotionStyle).map((style) => (
-        <button
-          key={style}
-          type="button"
-          onClick={() => setMotionStyle(style)}
-          className={`w-full min-h-[52px] px-3 py-3 rounded-lg text-sm border transition-all ${
-            motionStyle === style
-              ? 'bg-white text-black border-white font-medium'
-              : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
-          }`}
-        >
-          {style === 'slowmotion'
-            ? 'Slow Motion'
-            : style.charAt(0).toUpperCase() + style.slice(1)}
-        </button>
-      ))}
-    </div>
-  </div>
-</div>
+                          <div className="space-y-2 h-full flex flex-col">
+                            <label className="block text-sm font-medium text-gray-200">Video Style</label>
+                            <div className="grid grid-cols-2 gap-2 flex-1">
+                              {Object.values(MotionStyle).map((style) => (
+                                <button
+                                  key={style}
+                                  type="button"
+                                  onClick={() => setMotionStyle(style)}
+                                  className={`w-full min-h-[52px] px-3 py-3 rounded-lg text-sm border transition-all ${
+                                    motionStyle === style
+                                      ? 'bg-white text-black border-white font-medium'
+                                      : 'bg-surface border-white/10 text-gray-400 hover:border-white/30'
+                                  }`}
+                                >
+                                  {style === 'slowmotion'
+                                    ? 'Slow Motion'
+                                    : style.charAt(0).toUpperCase() + style.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-gray-200">Aspect Ratio</label>
@@ -952,22 +1114,22 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-96 bg-secondary/30 border-l border-white/10 flex flex-col">
-              <div className="p-6 border-b border-white/10 flex items-center justify-between bg-surface/50 backdrop-blur-sm">
+            <div className="w-full lg:w-96 h-[42vh] lg:h-auto bg-secondary/30 border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col shrink-0">
+              <div className="p-4 lg:p-6 border-b border-white/10 flex items-center justify-between bg-surface/50 backdrop-blur-sm">
                 <h2 className="font-semibold flex items-center gap-2">
                   <History className="w-4 h-4 text-primary" />
-                  Job History
+                  Generated Results
                 </h2>
                 <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-gray-300">{jobs.length}</span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 min-h-0">
                 {jobs.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-4 opacity-50">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
                       <Wand2 className="w-8 h-8" />
                     </div>
-                    <p className="text-sm">No jobs generated yet</p>
+                    <p className="text-sm text-center">No jobs generated yet</p>
                   </div>
                 ) : (
                   jobs.map((job: any) => (
@@ -983,9 +1145,9 @@ const App: React.FC = () => {
             </div>
           </main>
         ) : (
-          <main className="flex-1 overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
             <div className="max-w-3xl mx-auto min-h-full flex items-center justify-center">
-              <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 md:p-10 text-center">
+              <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 md:p-10 text-center">
                 <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                   <Video className="h-7 w-7" />
                 </div>
