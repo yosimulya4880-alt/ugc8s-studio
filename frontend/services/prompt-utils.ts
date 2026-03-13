@@ -220,6 +220,44 @@ export function mergePrompt(basePrompt: string, generatedPrompt: string): string
   return `${basePrompt.trim()}\n\n${generatedPrompt.trim()}`;
 }
 
+function getDeliveryStyleHintId(style: DeliveryStyle | ''): string {
+  switch (style) {
+    case 'Selebgram Endorse':
+      return 'dengan gaya bicara cepat, engaging, ekspresif, persuasif, dan terasa seperti host endorse media sosial';
+    case 'Reporter':
+      return 'dengan gaya bicara jelas, informatif, lugas, terstruktur, seperti reporter lapangan atau presenter berita';
+    case 'Story Teller':
+      return 'dengan gaya bercerita hangat, mengalir, deskriptif, imajinatif, dan emosional seperti pembaca cerita';
+    case 'Commentator':
+      return 'dengan gaya bicara energik, spontan, penuh penekanan, dan terasa seperti komentator live';
+    case 'Crowd / Audience':
+      return 'dengan nuansa suara kolektif, reaksi penonton, sorakan, gumaman, dan ambience keramaian audiens';
+    case 'Cinematic Narrator':
+      return 'dengan narasi sinematik yang halus, dalam, dramatis, dan terasa seperti voice-over trailer';
+    default:
+      return '';
+  }
+}
+
+function getDeliveryStyleHintEn(style: DeliveryStyle | ''): string {
+  switch (style) {
+    case 'Selebgram Endorse':
+      return 'with a fast, engaging, expressive, and persuasive delivery like a social media endorsement host';
+    case 'Reporter':
+      return 'with a clear, informative, structured delivery like a field reporter or news presenter';
+    case 'Story Teller':
+      return 'with a warm, flowing, descriptive, imaginative, and emotional storytelling delivery';
+    case 'Commentator':
+      return 'with an energetic, reactive, emphatic delivery like a live commentator';
+    case 'Crowd / Audience':
+      return 'with layered crowd ambience, audience reactions, cheering, murmurs, and public energy';
+    case 'Cinematic Narrator':
+      return 'with a smooth, deep, dramatic cinematic narration like a trailer voice-over';
+    default:
+      return '';
+  }
+}
+
 function buildCorePromptId(state: PromptGeneratorState, mode: PromptGeneratorMode): string {
   const parts = [
     state.subject ? `Subjek: ${state.subject}.` : '',
@@ -281,47 +319,111 @@ function buildCorePromptEn(state: PromptGeneratorState, mode: PromptGeneratorMod
 }
 
 function buildAudioBlockId(state: PromptGeneratorState): string {
-  const meta: string[] = [];
+  const descriptors: string[] = [];
 
-  if (state.audioType) meta.push(`tipe audio ${state.audioType.toLowerCase()}`);
-  if (state.deliveryStyle) meta.push(`gaya penyampaian ${state.deliveryStyle.toLowerCase()}`);
-  if (state.audioTone) meta.push(`tone ${state.audioTone.toLowerCase()}`);
-  if (state.audioPacing) meta.push(`tempo ${state.audioPacing.toLowerCase()}`);
-  if (state.speakerCount) meta.push(`jumlah speaker ${state.speakerCount.toLowerCase()}`);
-  if (state.languageStyle) meta.push(`bahasa ${state.languageStyle.toLowerCase()}`);
+  if (state.audioType) {
+    descriptors.push(`tipe audio ${state.audioType.toLowerCase()}`);
+  }
 
-  const header =
-    meta.length > 0
-      ? `Audio direction: buat arahan audio dengan ${meta.join(', ')}.`
-      : 'Audio direction:';
+  if (state.audioTone) {
+    descriptors.push(`tone ${state.audioTone.toLowerCase()}`);
+  }
+
+  if (state.audioPacing) {
+    descriptors.push(`tempo ${state.audioPacing.toLowerCase()}`);
+  }
+
+  if (state.speakerCount) {
+    descriptors.push(`jumlah speaker ${state.speakerCount.toLowerCase()}`);
+  }
+
+  if (state.languageStyle) {
+    descriptors.push(`gaya bahasa ${state.languageStyle.toLowerCase()}`);
+  }
+
+  const deliveryHint = getDeliveryStyleHintId(state.deliveryStyle);
+
+  const base =
+    descriptors.length > 0
+      ? `Audio direction: buat arahan audio dengan ${descriptors.join(', ')}`
+      : 'Audio direction: buat arahan audio yang natural dan sinkron dengan video';
+
+  const styleSentence = deliveryHint ? `, ${deliveryHint}` : '';
+
+  const closing =
+    state.deliveryStyle === 'Selebgram Endorse'
+      ? '. Fokus pada penyampaian yang menarik perhatian, terasa natural, dan cocok untuk konten promosi singkat.'
+      : state.deliveryStyle === 'Reporter'
+      ? '. Fokus pada penyampaian yang jelas, informatif, terstruktur, dan mudah dipahami.'
+      : state.deliveryStyle === 'Story Teller'
+      ? '. Fokus pada alur cerita yang mengalir, membangun suasana, dan terasa hidup.'
+      : state.deliveryStyle === 'Commentator'
+      ? '. Fokus pada energi spontan, penekanan momen, dan reaksi yang terasa dinamis.'
+      : state.deliveryStyle === 'Crowd / Audience'
+      ? '. Fokus pada ambience keramaian yang terasa hidup, natural, dan mendukung suasana adegan.'
+      : state.deliveryStyle === 'Cinematic Narrator'
+      ? '. Fokus pada narasi yang halus, dramatis, mendalam, dan sinematik.'
+      : '.';
 
   const details = state.extraDetails.trim()
     ? `\n${state.extraDetails.trim()}`
     : '';
 
-  return `${header}${details}`;
+  return `${base}${styleSentence}${closing}${details}`;
 }
 
 function buildAudioBlockEn(state: PromptGeneratorState): string {
-  const meta: string[] = [];
+  const descriptors: string[] = [];
 
-  if (state.audioType) meta.push(`${state.audioType.toLowerCase()} audio`);
-  if (state.deliveryStyle) meta.push(`${state.deliveryStyle.toLowerCase()} delivery style`);
-  if (state.audioTone) meta.push(`${state.audioTone.toLowerCase()} tone`);
-  if (state.audioPacing) meta.push(`${state.audioPacing.toLowerCase()} pacing`);
-  if (state.speakerCount) meta.push(`${state.speakerCount.toLowerCase()}`);
-  if (state.languageStyle) meta.push(`${state.languageStyle.toLowerCase()} language style`);
+  if (state.audioType) {
+    descriptors.push(`${state.audioType.toLowerCase()} audio`);
+  }
 
-  const header =
-    meta.length > 0
-      ? `Audio direction: create audio guidance with ${meta.join(', ')}.`
-      : 'Audio direction:';
+  if (state.audioTone) {
+    descriptors.push(`${state.audioTone.toLowerCase()} tone`);
+  }
+
+  if (state.audioPacing) {
+    descriptors.push(`${state.audioPacing.toLowerCase()} pacing`);
+  }
+
+  if (state.speakerCount) {
+    descriptors.push(`${state.speakerCount.toLowerCase()}`);
+  }
+
+  if (state.languageStyle) {
+    descriptors.push(`${state.languageStyle.toLowerCase()} language style`);
+  }
+
+  const deliveryHint = getDeliveryStyleHintEn(state.deliveryStyle);
+
+  const base =
+    descriptors.length > 0
+      ? `Audio direction: create audio guidance with ${descriptors.join(', ')}`
+      : 'Audio direction: create natural audio guidance that feels synced with the video';
+
+  const styleSentence = deliveryHint ? `, ${deliveryHint}` : '';
+
+  const closing =
+    state.deliveryStyle === 'Selebgram Endorse'
+      ? '. Focus on attention-grabbing, natural, engaging delivery suitable for short promotional content.'
+      : state.deliveryStyle === 'Reporter'
+      ? '. Focus on clarity, structure, informative delivery, and easy-to-follow speech.'
+      : state.deliveryStyle === 'Story Teller'
+      ? '. Focus on flowing narration, emotional storytelling, and immersive atmosphere.'
+      : state.deliveryStyle === 'Commentator'
+      ? '. Focus on reactive energy, emphatic delivery, and dynamic live commentary feel.'
+      : state.deliveryStyle === 'Crowd / Audience'
+      ? '. Focus on lively audience ambience, layered reactions, and natural public atmosphere.'
+      : state.deliveryStyle === 'Cinematic Narrator'
+      ? '. Focus on smooth, dramatic, deep narration with a cinematic trailer-like feel.'
+      : '.';
 
   const details = state.extraDetails.trim()
     ? `\n${state.extraDetails.trim()}`
     : '';
 
-  return `${header}${details}`;
+  return `${base}${styleSentence}${closing}${details}`;
 }
 
 export function buildGeneratedPrompt(
