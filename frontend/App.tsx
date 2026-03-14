@@ -315,6 +315,41 @@ const App: React.FC = () => {
     return parts.join(' ');
   };
 
+  const buildVideoGenerationContext = (
+    videoGenerationType: 'text' | 'image' | 'frames'
+  ): string => {
+    switch (videoGenerationType) {
+      case 'text':
+        return [
+          'Video generation mode: Text to Video.',
+          'Create the full scene from prompt only.',
+          'Focus on strong visual storytelling, coherent motion, clean subject continuity, and stable composition.',
+          'Make the action feel natural, readable, and visually consistent from beginning to end.',
+        ].join(' ');
+
+      case 'image':
+        return [
+          'Video generation mode: Image to Video.',
+          'Use the uploaded main image as the core visual anchor.',
+          'Preserve subject identity, facial features, outfit, product shape, colors, and overall composition from the source image.',
+          'Animate the scene naturally while keeping the original look consistent.',
+          'Avoid unnecessary subject drift, identity change, or major visual deviation from the reference image.',
+        ].join(' ');
+
+      case 'frames':
+        return [
+          'Video generation mode: Start / End Frame.',
+          'Use the uploaded start frame as the opening visual and the uploaded end frame as the closing visual target.',
+          'Generate a smooth, coherent, and visually believable transition between the two frames.',
+          'Preserve subject identity, camera logic, scene continuity, and motion consistency throughout the transition.',
+          'Avoid abrupt morphing, broken continuity, flicker, or random visual jumps.',
+        ].join(' ');
+
+      default:
+        return '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -352,13 +387,30 @@ const App: React.FC = () => {
     }
 
     const trimmedNegativePrompt = negativePrompt.trim();
+    const videoModeContext =
+      mode === ToolType.VIDEO_VEO
+        ? buildVideoGenerationContext(videoGenerationType)
+        : '';
+
     const basePrompt = isImageMode
       ? `${trimmedPrompt}\n\nImage settings:\n${buildImagePromptContext()}`
-      : trimmedPrompt;
+      : `${trimmedPrompt}\n\n${videoModeContext}`.trim();
+
+    const frameContinuityHint =
+      mode === ToolType.VIDEO_VEO && videoGenerationType === 'frames'
+        ? '\n\nMotion guidance: ensure the transition feels progressive, cinematic, and temporally smooth from the start frame to the end frame.'
+        : '';
+
+    const imageAnchorHint =
+      mode === ToolType.VIDEO_VEO && videoGenerationType === 'image'
+        ? '\n\nReference guidance: keep the uploaded main image as the visual anchor for subject identity, design details, and scene consistency.'
+        : '';
+
+    const enrichedPrompt = `${basePrompt}${frameContinuityHint}${imageAnchorHint}`.trim();
 
     const finalPrompt = trimmedNegativePrompt
-      ? `${basePrompt}\n\nAvoid / Negative:\n${trimmedNegativePrompt}`
-      : basePrompt;
+      ? `${enrichedPrompt}\n\nAvoid / Negative:\n${trimmedNegativePrompt}`
+      : enrichedPrompt;
 
     setIsSubmitting(true);
 
